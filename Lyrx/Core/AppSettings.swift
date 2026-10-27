@@ -28,14 +28,16 @@ final class AppSettings {
     }
 
     var formatting: FormattingOptions {
-        FormattingOptions(lineLimit: lineWidth == 0 ? nil : max(1, lineWidth),
-                          punctuation: punctuation, preserveBlankLines: preserveBlankLines)
+        FormattingOptions(
+            lineLimit: lineWidth == 0 ? nil : max(1, lineWidth),
+            punctuation: punctuation, preserveBlankLines: preserveBlankLines)
     }
 
     @discardableResult
     func setEnabled(_ enabled: Bool, provider: LyricProviderID) -> Bool {
-        if enabled { enabledProviders.insert(provider) }
-        else {
+        if enabled {
+            enabledProviders.insert(provider)
+        } else {
             guard enabledProviders.count > 1 || !enabledProviders.contains(provider) else { return false }
             enabledProviders.remove(provider)
         }

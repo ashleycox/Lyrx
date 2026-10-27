@@ -1,0 +1,4 @@
+// Copy to Local.xcconfig (ignored by Git) before running on your own devices.
+// Supply your team ID and a unique reverse-DNS bundle identifier locally.
+DEVELOPMENT_TEAM =
+LYRX_BUNDLE_IDENTIFIER = org.example.lyrx

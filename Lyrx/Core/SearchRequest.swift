@@ -8,10 +8,11 @@ struct SearchRequest: Equatable, Sendable {
     var album = ""
 
     var cleaned: Self {
-        Self(query: query.trimmingCharacters(in: .whitespacesAndNewlines),
-             artist: artist.trimmingCharacters(in: .whitespacesAndNewlines),
-             title: title.trimmingCharacters(in: .whitespacesAndNewlines),
-             album: album.trimmingCharacters(in: .whitespacesAndNewlines))
+        Self(
+            query: query.trimmingCharacters(in: .whitespacesAndNewlines),
+            artist: artist.trimmingCharacters(in: .whitespacesAndNewlines),
+            title: title.trimmingCharacters(in: .whitespacesAndNewlines),
+            album: album.trimmingCharacters(in: .whitespacesAndNewlines))
     }
     var isEmpty: Bool { [query, artist, title, album].allSatisfy { $0.isEmpty } }
     var suggestionQuery: String { [query, artist, title, album].filter { !$0.isEmpty }.joined(separator: " ") }

@@ -56,7 +56,10 @@ final class ReaderModel {
                 self.matches = response.matches
                 self.notices = response.notices
                 guard !response.matches.isEmpty else {
-                    self.status = response.notices.isEmpty ? "No matches. Try a shorter search or change the filters." : "No matches were returned. Check the service messages below."
+                    self.status =
+                        response.notices.isEmpty
+                        ? "No matches. Try a shorter search or change the filters."
+                        : "No matches were returned. Check the service messages below."
                     self.isSearching = false
                     return
                 }
@@ -162,7 +165,10 @@ final class ReaderModel {
         formattingError = nil
         document = FormattedLyrics(lines: [])
         reformat(options)
-        status = match.instrumental ? "This recording is marked instrumental; there are no lyric lines." : "Loaded \(match.title) by \(match.artist)."
+        status =
+            match.instrumental
+            ? "This recording is marked instrumental; there are no lyric lines."
+            : "Loaded \(match.title) by \(match.artist)."
         selectionID = UUID()
         focusReader()
     }

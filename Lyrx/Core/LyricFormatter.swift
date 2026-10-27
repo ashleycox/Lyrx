@@ -5,7 +5,7 @@ enum LyricFormattingError: LocalizedError, Equatable {
 
     var errorDescription: String? {
         switch self {
-        case let .wordTooLong(required, limit):
+        case .wordTooLong(let required, let limit):
             "A word needs \(required) characters, but the line limit is \(limit). Increase the limit to at least \(required), or choose Unlimited in Settings. No words have been split or removed."
         }
     }
@@ -50,13 +50,16 @@ enum LyricFormatter {
 
     /// LRCLIB may supply only LRC. Remove timing and known metadata, never bracketed lyric headings.
     static func plainText(fromLRC source: String) -> String {
-        source.components(separatedBy: .newlines).compactMap { line -> String? in
+        source.replacingOccurrences(of: "\r\n", with: "\n").components(separatedBy: .newlines).compactMap {
+            line -> String? in
             if line.range(of: #"^\[(ar|ti|al|by|offset|re|ve|length):.*\]$"#, options: .regularExpression) != nil {
                 return nil
             }
-            return line.replacingOccurrences(of: #"^(\[\d{1,3}:\d{2}(?:[.:]\d{1,3})?\])+\s*"#,
-                                            with: "", options: .regularExpression)
-                .replacingOccurrences(of: #"<\d{1,3}:\d{2}(?:[.:]\d{1,3})?>"#, with: "", options: .regularExpression)
+            return line.replacingOccurrences(
+                of: #"^(\[\d{1,3}:\d{2}(?:[.:]\d{1,3})?\])+\s*"#,
+                with: "", options: .regularExpression
+            )
+            .replacingOccurrences(of: #"<\d{1,3}:\d{2}(?:[.:]\d{1,3})?>"#, with: "", options: .regularExpression)
         }.joined(separator: "\n")
     }
 }

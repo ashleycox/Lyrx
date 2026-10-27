@@ -20,6 +20,7 @@ Lyrx is a native macOS, iPhone, and iPad lyric finder designed first for people 
 - On successful search, focus the lyric reader at the first line. Provide next, previous, first, and last line actions and accessible current-line status. Do not steal focus on ordinary redraws.
 - Every action must be keyboard reachable on macOS. Add discoverable menu commands and shortcuts for primary actions, filters, match selection, and settings. Use native keyboard interaction inside controls.
 - Support VoiceOver, Full Keyboard Access, Dynamic Type, Zoom, light and dark appearance, increased contrast, and Reduce Motion. Do not use color alone or clip large text.
+- Keep all interface copy and help specific to the current platform. Never display iPhone or iPad instructions in the Mac app; describe Mac menus, keyboard interaction, and VoiceOver Utility there. Touch-platform screens describe touch, VoiceOver actions, and system Settings.
 - Verify text selection and focus with platform accessibility tools. Record real-device braille checks as manual unless actually performed; simulator results cannot prove hardware compatibility.
 
 ## Project and signing

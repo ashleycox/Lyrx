@@ -1,10 +1,13 @@
 import Foundation
 import Testing
+
 @testable import LyrxCore
 
 private struct ImmediateService: LyricSearching {
     let matches: [LyricMatch]
-    func search(_ request: SearchRequest, enabled: Set<LyricProviderID>) async throws -> SearchResponse { .init(matches: matches) }
+    func search(_ request: SearchRequest, enabled: Set<LyricProviderID>) async throws -> SearchResponse {
+        .init(matches: matches)
+    }
     func lyrics(for match: LyricMatch) async throws -> String {
         if match.instrumental { return "" }
         guard let lyrics = match.lyrics else { throw LyricServiceError.noLyrics }
@@ -27,9 +30,11 @@ private actor SuspendedService: LyricSearching {
         await withCheckedContinuation { arrivals[name] = $0 }
     }
     func complete(_ name: String) {
-        pending.removeValue(forKey: name)?.resume(returning: .init(matches: [
-            LyricMatch(provider: .lrclib, providerID: name, title: name, artist: "Test", lyrics: "First line\nSecond line")
-        ]))
+        pending.removeValue(forKey: name)?.resume(
+            returning: .init(matches: [
+                LyricMatch(
+                    provider: .lrclib, providerID: name, title: name, artist: "Test", lyrics: "First line\nSecond line")
+            ]))
     }
     func lyrics(for match: LyricMatch) async throws -> String { match.lyrics ?? "" }
 }
@@ -46,7 +51,8 @@ private actor SuspendedService: LyricSearching {
         let matches = [
             LyricMatch(provider: .lrclib, providerID: "1", title: "Instrumental", artist: "Test", instrumental: true),
             LyricMatch(provider: .lrclib, providerID: "2", title: "Missing", artist: "Test"),
-            LyricMatch(provider: .lrclib, providerID: "3", title: "Vocal", artist: "Test", lyrics: "First line\n\nLast line")
+            LyricMatch(
+                provider: .lrclib, providerID: "3", title: "Vocal", artist: "Test", lyrics: "First line\n\nLast line"),
         ]
         let model = ReaderModel(service: ImmediateService(matches: matches))
         let oldFocus = model.readerFocusID
@@ -67,7 +73,10 @@ private actor SuspendedService: LyricSearching {
         let (settings, defaults, name) = preferences()
         defer { defaults.removePersistentDomain(forName: name) }
         settings.lineWidth = 4
-        let model = ReaderModel(service: ImmediateService(matches: [.init(provider: .lrclib, providerID: "1", title: "Example", artist: "Test", lyrics: "Wonderful day")]))
+        let model = ReaderModel(
+            service: ImmediateService(matches: [
+                .init(provider: .lrclib, providerID: "1", title: "Example", artist: "Test", lyrics: "Wonderful day")
+            ]))
         model.request.query = "Example"
         model.search(settings: settings)
         await model.waitForCurrentOperation()

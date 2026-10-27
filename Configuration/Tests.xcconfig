@@ -1,0 +1,4 @@
+// UI test host and local bundle overrides share the application configuration.
+#include "Shared.xcconfig"
+TEST_TARGET_NAME = Lyrx
+PRODUCT_BUNDLE_IDENTIFIER = $(LYRX_BUNDLE_IDENTIFIER).UITests

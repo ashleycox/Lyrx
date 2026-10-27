@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+
 @testable import LyrxCore
 
 struct FormattingTests {
@@ -9,7 +10,10 @@ struct FormattingTests {
         #expect(result.lines.allSatisfy { $0.count <= 8 })
     }
     @Test func wordMovesIntactToNextLine() throws {
-        #expect(try LyricFormatter.format("Blue quiet harbor", options: .init(lineLimit: 10)).lines == ["Blue quiet", "harbor"])
+        #expect(
+            try LyricFormatter.format("Blue quiet harbor", options: .init(lineLimit: 10)).lines == [
+                "Blue quiet", "harbor",
+            ])
     }
     @Test func oversizedWordStopsFormatting() {
         #expect(throws: LyricFormattingError.wordTooLong(required: 9, limit: 4)) {
@@ -17,16 +21,22 @@ struct FormattingTests {
         }
     }
     @Test func unlimitedDoesNotWrap() throws {
-        #expect(try LyricFormatter.format("a wonderful day", options: .init(lineLimit: nil)).lines == ["a wonderful day"])
+        #expect(
+            try LyricFormatter.format("a wonderful day", options: .init(lineLimit: nil)).lines == ["a wonderful day"])
     }
     @Test func stanzaAndLineEndingsSurvive() throws {
-        #expect(try LyricFormatter.format(" One\r\n\r\nTwo\rThree\u{2028}Four ", options: .init()).lines == ["One", "", "Two", "Three", "Four"])
+        #expect(
+            try LyricFormatter.format(" One\r\n\r\nTwo\rThree\u{2028}Four ", options: .init()).lines == [
+                "One", "", "Two", "Three", "Four",
+            ])
     }
     @Test func blankLinePreferenceIsIndependentOfWrapping() throws {
-        #expect(try LyricFormatter.format("One\n\nTwo", options: .init(preserveBlankLines: false)).lines == ["One", "Two"])
+        #expect(
+            try LyricFormatter.format("One\n\nTwo", options: .init(preserveBlankLines: false)).lines == ["One", "Two"])
     }
     @Test func punctuationAndQuotesStayWithWords() throws {
-        let result = try LyricFormatter.format("Hello, friend. “Stay here!” We’re home", options: .init(lineLimit: nil, punctuation: .all))
+        let result = try LyricFormatter.format(
+            "Hello, friend. “Stay here!” We’re home", options: .init(lineLimit: nil, punctuation: .all))
         #expect(result.lines == ["Hello,", "friend.", "“Stay here!”", "We’re home"])
     }
     @Test func apostrophesHyphensAndUnicodeAreNeverSplit() throws {
@@ -39,6 +49,9 @@ struct FormattingTests {
     @Test func lrcRemovesTimingButPreservesHeadings() {
         let source = "[ar:Example]\n[00:01.00][00:12.50]Original line\n[Chorus]\n[00:04.5]<00:04.5>Another line"
         #expect(LyricFormatter.plainText(fromLRC: source) == "Original line\n[Chorus]\nAnother line")
+    }
+    @Test func lrcWindowsLineEndingsDoNotCreateExtraStanzas() {
+        #expect(LyricFormatter.plainText(fromLRC: "[00:01.00]One\r\n[00:02.00]Two") == "One\nTwo")
     }
     @Test func generatedWordSequencesAlwaysRespectLimit() throws {
         for limit in 1...80 {

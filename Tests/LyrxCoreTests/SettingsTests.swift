@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+
 @testable import LyrxCore
 
 @MainActor struct SettingsTests {

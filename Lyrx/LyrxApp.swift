@@ -1,32 +1,30 @@
-//
-//  LyrxApp.swift
-//  Lyrx
-//
-//  Created by Ashley Cox on 27/10/2026.
-//
-
 import SwiftUI
-import SwiftData
 
+/// Preferences are shared; each window owns its search and reading position.
 @main
 struct LyrxApp: App {
-    var sharedModelContainer: ModelContainer = {
-        let schema = Schema([
-            Item.self,
-        ])
-        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
+    @State private var settings = AppSettings()
 
-        do {
-            return try ModelContainer(for: schema, configurations: [modelConfiguration])
-        } catch {
-            fatalError("Could not create ModelContainer: \(error)")
-        }
-    }()
-
+    init() {
+        #if DEBUG
+            if ProcessInfo.processInfo.arguments.contains("--ui-testing"),
+                let defaults = UserDefaults(suiteName: "Lyrx.UITests")
+            {
+                // UI tests never modify the user's actual preferences or contact a lyric service.
+                defaults.removePersistentDomain(forName: "Lyrx.UITests")
+                _settings = State(initialValue: AppSettings(defaults: defaults))
+            }
+        #endif
+    }
     var body: some Scene {
-        WindowGroup {
-            ContentView()
-        }
-        .modelContainer(sharedModelContainer)
+        WindowGroup { ContentView().environment(settings) }
+            .defaultSize(width: 820, height: 720)
+            .commands { LyrxCommands(settings: settings) }
+        #if os(macOS)
+            Settings {
+                SettingsView().environment(settings)
+                    .frame(minWidth: 520, minHeight: 620)
+            }
+        #endif
     }
 }

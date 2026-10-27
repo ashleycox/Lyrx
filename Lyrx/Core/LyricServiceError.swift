@@ -2,7 +2,9 @@ import Foundation
 
 /// User-facing failures deliberately omit URLs and search text.
 enum LyricServiceError: LocalizedError, Sendable, Equatable {
-    case invalidResponse, tooLarge, unavailable(Int), noLyrics, invalidURL
+    case invalidResponse, tooLarge
+    case unavailable(Int)
+    case noLyrics, invalidURL
 
     var errorDescription: String? {
         switch self {

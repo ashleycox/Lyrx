@@ -8,7 +8,7 @@ let package = Package(
     products: [.library(name: "LyrxCore", targets: ["LyrxCore"])],
     targets: [
         .target(name: "LyrxCore", path: "Lyrx/Core"),
-        .testTarget(name: "LyrxCoreTests", dependencies: ["LyrxCore"])
+        .testTarget(name: "LyrxCoreTests", dependencies: ["LyrxCore"]),
     ],
     swiftLanguageModes: [.v6]
 )
