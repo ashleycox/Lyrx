@@ -15,8 +15,8 @@ Lyrx is a native macOS, iPhone, and iPad lyric finder designed first for people 
 
 ## Accessibility and formatting
 
-- Use actual newline characters and native selectable text. Preserve stanza breaks. Never split a word or Unicode grapheme to satisfy a line length; a long word may exceed the configured target.
-- Default to a 40-character target and whole-word wrapping. Formatting choices must never silently remove lyric words or punctuation. Braille translation and cell counts belong to the operating system.
+- Use actual newline characters and native selectable text. Preserve stanza breaks. Never split a word or Unicode grapheme. A finite line width is a hard limit including spaces and punctuation: move a whole word to the next line if it will not fit. If a word alone exceeds the limit, pause formatting and ask the user to increase the width or choose Unlimited.
+- Default to a hard 40-character limit and whole-word wrapping. Provide Unlimited for display panning. Formatting choices must never silently remove lyric words or punctuation. Braille translation and its relationship to text characters belong to the operating system.
 - On successful search, focus the lyric reader at the first line. Provide next, previous, first, and last line actions and accessible current-line status. Do not steal focus on ordinary redraws.
 - Every action must be keyboard reachable on macOS. Add discoverable menu commands and shortcuts for primary actions, filters, match selection, and settings. Use native keyboard interaction inside controls.
 - Support VoiceOver, Full Keyboard Access, Dynamic Type, Zoom, light and dark appearance, increased contrast, and Reduce Motion. Do not use color alone or clip large text.
