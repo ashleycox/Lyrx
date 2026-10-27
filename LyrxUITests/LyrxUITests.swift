@@ -3,7 +3,7 @@ import XCTest
 /// End-to-end checks use original fixture text and isolated preferences, without network access.
 final class LyrxUITests: XCTestCase {
     @MainActor private func launch(largeText: Bool = false) -> XCUIApplication {
-        let app = XCUIApplication(bundleIdentifier: "org.lyrx.app")
+        let app = XCUIApplication()
         app.launchArguments = ["--ui-testing"]
         if largeText {
             app.launchArguments += ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"]

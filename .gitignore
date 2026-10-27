@@ -14,3 +14,5 @@ Configuration/Local.xcconfig
 .env
 .env.*
 !.env.example
+__pycache__/
+*.pyc

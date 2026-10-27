@@ -1,0 +1,19 @@
+name: Verify
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+      - name: Show toolchain
+        run: |
+          xcodebuild -version
+          swift --version
+      - name: Check repository, test, and build both platforms
+        run: Scripts/verify.sh
+      - name: Test iPhone interface
+        run: Scripts/test-ui.sh

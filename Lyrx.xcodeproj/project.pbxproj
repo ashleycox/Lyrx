@@ -7,10 +7,10 @@
 	objects = {
 
 /* Begin PBXFileReference section */
-		A00000000000000000000002 /* Tests.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Configuration/Tests.xcconfig; sourceTree = "<group>"; };
 		4C6138AC3090ED9F00B75FA0 /* LyrxUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = LyrxUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		4C632FAA3090DFD700823183 /* Lyrx.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Lyrx.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A00000000000000000000001 /* Configuration/Shared.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Configuration/Shared.xcconfig; sourceTree = "<group>"; };
+		A00000000000000000000002 /* Configuration/Tests.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Configuration/Tests.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -40,6 +40,14 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		4C6138B33090EE5B00B75FA0 /* Recovered References */ = {
+			isa = PBXGroup;
+			children = (
+				A00000000000000000000002 /* Configuration/Tests.xcconfig */,
+			);
+			name = "Recovered References";
+			sourceTree = "<group>";
+		};
 		4C632FA13090DFD700823183 = {
 			isa = PBXGroup;
 			children = (
@@ -47,6 +55,7 @@
 				A00000000000000000000001 /* Configuration/Shared.xcconfig */,
 				4C6138AD3090ED9F00B75FA0 /* LyrxUITests */,
 				4C632FAB3090DFD700823183 /* Products */,
+				4C6138B33090EE5B00B75FA0 /* Recovered References */,
 			);
 			sourceTree = "<group>";
 		};
@@ -165,11 +174,10 @@
 /* Begin XCBuildConfiguration section */
 		4C6138B13090ED9F00B75FA0 /* Debug configuration for PBXNativeTarget "LyrxUITests" */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = A00000000000000000000002 /* Tests.xcconfig */;
+			baseConfigurationReference = A00000000000000000000002 /* Configuration/Tests.xcconfig */;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
@@ -191,11 +199,10 @@
 		};
 		4C6138B23090ED9F00B75FA0 /* Release configuration for PBXNativeTarget "LyrxUITests" */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = A00000000000000000000002 /* Tests.xcconfig */;
+			baseConfigurationReference = A00000000000000000000002 /* Configuration/Tests.xcconfig */;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
