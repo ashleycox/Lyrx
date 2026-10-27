@@ -36,5 +36,15 @@ Lyrx is a native macOS, iPhone, and iPad lyric finder designed first for people 
 
 - Before changes, inspect the working tree and fetch the authorized remote. This is the owner's project: continue on the default branch unless a task branch is requested or already active. Preserve unrelated work.
 - Make coherent commits with descriptive titles and no tool branding or attribution. Verify the actual remote destination before pushing completed work. Do not open pull requests unless explicitly requested.
-- Test formatting, ranking, provider invariants, decoding, failure isolation, and cancellation with deterministic fixtures. Build both macOS and iOS. Run accessibility and keyboard checks appropriate to the change and report limitations.
+- Test formatting, ranking, provider invariants, decoding, failure isolation, and cancellation with deterministic fixtures. Build both macOS and iOS after shared-code changes; otherwise verify the affected platform. Run accessibility and keyboard checks appropriate to the change and report limitations.
 - Maintain README.md, CONTRIBUTING.md, provider research, and manual accessibility checks as behavior changes. The project uses GPL v3; preserve its license and notices.
+
+## Fast UI verification
+
+- UI testing must be efficient. Use fast core tests for logic and reserve UI automation for native focus, keyboard interaction, accessibility exposure, and layout that cannot be verified at a lower level.
+- Run the smallest relevant UI check on the affected platform. The local default is one Mac smoke test, with no simulator boot. Broader suites and iOS UI runs are explicit choices, not mandatory steps for every change or push. Routine CI runs core tests and platform builds; the separate UI workflow runs on demand.
+- Aim for a warm smoke test to execute in under 15 seconds and other focused tests in under 30 seconds. Measure test execution separately from compilation and simulator startup. Use a 60-second XCTest timeout (its allowances round up to whole minutes); investigate overruns instead of repeatedly rerunning a slow suite.
+- Reuse build directories and an already booted compatible simulator. Do not build the app twice for the same check or launch parallel simulator clones for this small suite. Cancel superseded routine CI runs and bound workflow duration.
+- Use short deterministic inputs and the fewest actions needed to prove the behavior. For example, check adjacent-row navigation and the outcome of crossing a scroll boundary instead of waiting on every equivalent row. Preserve distinct regressions, including empty-reader transitions and explicit focus transfer.
+- Use condition-based waits, fail promptly, and collect diagnostics on failure. Do not add fixed sleeps, live service calls, automatic retry loops, or screenshots on every successful test.
+- After a failure, inspect its evidence and rerun only the affected check. Once relevant checks pass, stop expanding or repeating testing without a new change, failure, or concrete unresolved concern. Report exactly what ran and any remaining manual VoiceOver or braille validation.

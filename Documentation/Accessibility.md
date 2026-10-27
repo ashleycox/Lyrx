@@ -6,7 +6,9 @@ Lyrx uses a read-only, selectable NSTextView on macOS and UITextView on iOS. The
 
 Core tests verify hard widths (including spaces and punctuation), intact words and Unicode graphemes, UTF-16 selection offsets, stanza preservation, punctuation boundaries, unlimited lines, oversized-word recovery, ranking, provider isolation, cancellation, and stale-response protection.
 
-Focus requests are consumed once. Tests verify that browsing a match can update the lyric without requesting reader focus, and that an old focus request cannot be replayed after a text view is recreated. The Mac interface test navigates multiple table rows with application-level arrow-key events, including scrolling and an instrumental result that temporarily removes the text view, to detect focus escaping into the lyric reader.
+Focus requests are consumed once. Core tests verify that browsing a match can update the lyric without requesting reader focus, and that an old focus request cannot be replayed after a text view is recreated. The focused Mac interface test checks an adjacent row, crosses the scroll boundary in one keyboard-input batch, and visits an instrumental result that temporarily removes the text view. Application-level key events detect focus escaping into the reader without a separate wait for every equivalent row.
+
+Use `Scripts/test-ui.sh macOS focus` for this regression, `Scripts/test-ui.sh iOS large-text` for Dynamic Type layout, and `Scripts/test-ui.sh iOS settings` for provider controls. The default runner selects one Mac smoke test. Broader suites are explicit and are not run on every push; see the verification policy in `AGENTS.md`.
 
 ## Runtime checks performed
 

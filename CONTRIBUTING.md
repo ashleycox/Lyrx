@@ -23,6 +23,8 @@ Use documented public HTTPS APIs, not webpage scraping. Record endpoint contract
 
 Run `Scripts/verify.sh`. Add meaningful tests for behavioral changes using Swift Testing and original fixture text. Do not make routine tests depend on public service availability. Build both macOS and iOS after changes to shared code. Use `Documentation/Accessibility.md` for manual checks; state the actual platform, assistive technology, and display tested.
 
+Keep UI verification fast, as required by `AGENTS.md`. Run `Scripts/test-ui.sh` for one Mac smoke test, or select an affected check such as `Scripts/test-ui.sh macOS focus` or `Scripts/test-ui.sh iOS large-text`. Reuse the default build directories. Do not run both full platform suites after each edit, loop over equivalent rows, add fixed sleeps, or retain screenshots for every successful test. After a failure, inspect its evidence and rerun only that check. The separate UI checks workflow is manual; routine CI uses fast core tests and platform builds. Report measured test execution separately from build and simulator startup.
+
 Pull requests should explain the problem, the resulting behavior, why the approach was chosen, verification commands and results, and any untested behavior. Include screenshots for visual changes where useful, without copyrighted lyrics or personal information. Keep commits short and descriptive. Preserve any required human sign-offs; do not add tool attribution.
 
 ## Signing and repository privacy

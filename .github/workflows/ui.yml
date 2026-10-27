@@ -1,0 +1,28 @@
+name: UI checks
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: Platform to check
+        type: choice
+        options: [macOS, iOS]
+        default: macOS
+      scope:
+        description: Check (focus is Mac-only; settings and large-text are iOS-only)
+        type: choice
+        options: [smoke, focus, settings, large-text, all]
+        default: smoke
+permissions:
+  contents: read
+jobs:
+  ui:
+    runs-on: macos-26
+    timeout-minutes: ${{ inputs.scope == 'all' && 8 || 5 }}
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+      LYRX_UI_PLATFORM: ${{ inputs.platform }}
+      LYRX_UI_SCOPE: ${{ inputs.scope }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Run selected UI check
+        run: Scripts/test-ui.sh "$LYRX_UI_PLATFORM" "$LYRX_UI_SCOPE"

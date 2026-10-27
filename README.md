@@ -65,15 +65,21 @@ This runs repository privacy checks, deterministic Swift Testing tests, and both
 swift test --scratch-path /tmp/lyrx-tests
 ```
 
-The standalone `Package.swift` builds the same core files used by the application. Tests cover hard limits, word preservation, Unicode ranges, LRC parsing, ranking, enabled providers, decoding, failures, cancellation, stale responses, and settings recovery. Fixtures contain original example text, not song lyrics. The shared app scheme also contains UI tests. Select an iPhone or iPad simulator and choose Product → Test, or run:
+The standalone `Package.swift` builds the same core files used by the application. Tests cover hard limits, word preservation, Unicode ranges, LRC parsing, ranking, enabled providers, decoding, failures, cancellation, stale responses, and settings recovery. Fixtures contain original example text, not song lyrics. Routine CI runs these checks and builds without starting UI automation; a newer push cancels an obsolete Verify run.
+
+For UI changes, run the smallest relevant check. The default is a single Mac search-and-reading smoke test:
 
 ```sh
-xcodebuild -project Lyrx.xcodeproj -scheme Lyrx \
-  -destination 'platform=iOS Simulator,name=iPhone 18 Pro' \
-  -derivedDataPath /tmp/lyrx-ui-tests CODE_SIGNING_ALLOWED=NO test
+Scripts/test-ui.sh
+Scripts/test-ui.sh macOS focus
+Scripts/test-ui.sh iOS large-text
 ```
 
-Replace the simulator name with one installed on your Mac, or run `Scripts/test-ui.sh` to select an available iPhone automatically. Set `LYRX_UI_DESTINATION` to test another simulator. Run `LYRX_UI_DESTINATION='platform=macOS' Scripts/test-ui.sh` for Mac keyboard navigation and results-table tests. CI runs both interface suites after core checks and platform builds. UI tests use a Debug-only fixture service and an isolated preference suite; Release builds do not contain that test mode. Core tests are available through the Swift package.
+Available scopes are `smoke` (either platform), `focus` (Mac), `settings` and `large-text` (iOS), and `all` (the selected platform). Use `Scripts/test-ui.sh iOS all` for the full iPhone suite. Broader coverage belongs before releases or when a shared interface change warrants it, rather than after every edit.
+
+The runner reuses `Scripts/verify.sh` build directories, prefers an already booted compatible iPhone simulator, and disables parallel simulator clones. `LYRX_BUILD_ROOT` changes the shared build root; `LYRX_UI_BUILD_ROOT` overrides just the UI output directory. `LYRX_UI_DESTINATION` selects a specific destination on the requested platform, including an iPad simulator. Tests have a 60-second timeout because [XCTest rounds allowances up to whole minutes](https://developer.apple.com/documentation/xctest/xctestcase/executiontimeallowance); build and boot time are separate. The warm smoke-test target is under 15 seconds of test execution, with other focused tests under 30 seconds.
+
+The **UI checks** GitHub Actions workflow is manual: choose a platform and scope. It has a five-minute job limit for focused checks and eight minutes for a full platform suite. The shared Xcode scheme also supports selecting individual tests in the Test navigator. UI tests use a Debug-only fixture service and isolated preferences; Release builds do not contain that test mode. Successful runs do not add custom screenshot attachments; failures retain XCTest diagnostics.
 
 See [accessibility verification](Documentation/Accessibility.md) for the hardware and manual checklist. Automated tests and accessibility-tree inspection do not establish compatibility with a particular braille display or translation table. Physical braille validation remains necessary before a public release.
 
