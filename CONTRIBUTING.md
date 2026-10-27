@@ -15,6 +15,8 @@ Use Xcode 26.6 or later and Swift 6 strict concurrency. Keep the project file at
 - Use semantic colors, Dynamic Type where supported, native controls, and keyboard access. Test large text and small windows. Avoid animation that interferes with reading focus.
 - Do not add a dependency, service, data collection, persistent lyric storage, or permission without discussing its purpose and implications first.
 
+The app icon lives in `Lyrx/AppIcon.icon`. Open it in Icon Composer to edit the teal background and hand-and-microphone foreground. Keep both iOS and macOS enabled and review Default, Dark, and Mono appearances, including small preview sizes. Xcode compiles this document directly; do not recreate the old raster asset catalog. See [icon artwork and editing notes](Documentation/AppIcon.md).
+
 ## Providers
 
 Use documented public HTTPS APIs, not webpage scraping. Record endpoint contracts and limitations in `Documentation/Providers.md`. Every provider must be selectable, and at least one must stay enabled. Check cancellation, timeouts, response bounds, empty results, invalid JSON, and partial failures. Never embed API credentials or real contact addresses. Use reserved `.invalid` addresses only in isolated fixtures, never against a live endpoint. Test lrc.red without an email as well as with one; its search, lyrics, and metadata paths must all enforce configuration. Keep attribution visible and do not represent API availability as permission to redistribute lyric content.
