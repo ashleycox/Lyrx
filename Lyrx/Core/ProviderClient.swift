@@ -252,8 +252,9 @@ private struct LrcRedRecord: Decodable {
         title = try values.decode(String.self, forKey: .title)
         artist = try values.decode(String.self, forKey: .artist)
         album = try values.decodeIfPresent(String.self, forKey: .album) ?? ""
+        // Timing availability is irrelevant to the plain-text reader, which never follows playback.
         metadata = try MetadataValue(from: decoder).fields(excluding: [
-            "title", "artist", "album", "lyrics", "plainLyrics", "syncedLyrics",
+            "title", "artist", "album", "lyrics", "plainLyrics", "syncedLyrics", "sync",
         ])
     }
 

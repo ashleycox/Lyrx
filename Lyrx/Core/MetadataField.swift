@@ -85,7 +85,7 @@ indirect enum MetadataValue: Decodable, Sendable {
 
     private static func label(_ key: String) -> String {
         let labels = [
-            "id": "Provider ID", "isrc": "ISRC", "released": "Release date", "sync": "Timing", "lines": "Lyric lines",
+            "id": "Provider ID", "isrc": "ISRC", "released": "Release date", "lines": "Lyric lines",
             "featured": "Featured artists", "songwriters": "Songwriters", "bpm": "BPM",
             "explicit_lyrics": "Explicit lyrics", "trackName": "Title", "artistName": "Artist", "albumName": "Album",
         ]
