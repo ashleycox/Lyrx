@@ -15,7 +15,7 @@ import SwiftUI
             scroll.hasHorizontalScroller = true
             scroll.autohidesScrollers = true
             scroll.borderType = .noBorder
-            let text = NSTextView()
+            let text = MacLyricTextView()
             text.isEditable = false
             text.isSelectable = true
             text.isRichText = false
@@ -29,10 +29,14 @@ import SwiftUI
             text.textContainer?.containerSize = text.maxSize
             text.textContainerInset = NSSize(width: 12, height: 12)
             text.delegate = context.coordinator
+            text.didAttachToWindow = { [weak text, weak coordinator = context.coordinator] in
+                guard let text else { return }
+                coordinator?.scheduleFocus(in: text)
+            }
             text.setAccessibilityLabel("Lyrics")
             text.setAccessibilityIdentifier("lyricReader")
             text.setAccessibilityHelp(
-                "Read-only lyrics. Use standard text navigation, or Command–Option–Up and Down Arrow to move between formatted lines."
+                "Read-only lyrics. Command–L returns focus here. Use standard text navigation, or Command–Option–Up and Down Arrow to move between formatted lines."
             )
             scroll.documentView = text
             return scroll
@@ -43,7 +47,7 @@ import SwiftUI
             let coordinator = context.coordinator
             // SwiftUI may update a representable once more before removing an empty reader.
             guard model.hasLyrics else {
-                coordinator.focusTask?.cancel()
+                coordinator.cancelFocus()
                 return
             }
             coordinator.model = model
@@ -85,35 +89,59 @@ import SwiftUI
                 text.setSelectedRange(NSRange(location: offset, length: 0))
                 text.scrollRangeToVisible(text.selectedRange())
             }
-            if let requestID = model.pendingReaderFocusID, coordinator.lastFocus != requestID {
-                coordinator.lastFocus = requestID
-                // The view is attached by the time this main-actor task runs. Ordinary redraws never refocus it.
-                coordinator.focusTask?.cancel()
-                coordinator.focusTask = Task { @MainActor [weak text] in
-                    await Task.yield()
-                    guard !Task.isCancelled, let text, let window = text.window,
-                        model.consumeReaderFocus(requestID)
-                    else { return }
-                    window.makeFirstResponder(text)
-                    NSAccessibility.post(element: text, notification: .focusedUIElementChanged)
-                }
-            }
+            coordinator.scheduleFocus(in: text)
         }
 
         static func dismantleNSView(_ nsView: NSScrollView, coordinator: Coordinator) {
-            coordinator.focusTask?.cancel()
-            (nsView.documentView as? NSTextView)?.delegate = nil
+            coordinator.cancelFocus()
+            let text = nsView.documentView as? MacLyricTextView
+            text?.didAttachToWindow = nil
+            text?.delegate = nil
         }
 
         @MainActor final class Coordinator: NSObject, NSTextViewDelegate {
             var model: ReaderModel
-            var lastFocus: UUID?
+            private var scheduledFocus: UUID?
             var lastSelection: UUID?
             var lastHighlight: NSRange?
             var updating = false
             var singleLine = false
             var focusTask: Task<Void, Never>?
             init(model: ReaderModel) { self.model = model }
+
+            func cancelFocus() {
+                focusTask?.cancel()
+                focusTask = nil
+                scheduledFocus = nil
+            }
+
+            func scheduleFocus(in text: NSTextView) {
+                guard let requestID = model.pendingReaderFocusID else {
+                    cancelFocus()
+                    return
+                }
+                // Attachment will call us again. A single Task.yield() cannot guarantee a window exists.
+                guard text.window != nil, scheduledFocus != requestID else { return }
+                cancelFocus()
+                scheduledFocus = requestID
+                focusTask = Task { @MainActor [weak self, weak text] in
+                    await Task.yield()
+                    guard !Task.isCancelled, let self else { return }
+                    defer {
+                        self.scheduledFocus = nil
+                        self.focusTask = nil
+                    }
+                    guard let text, let window = text.window, self.model.hasLyrics,
+                        self.model.pendingReaderFocusID == requestID,
+                        window.makeFirstResponder(text), window.firstResponder === text
+                    else { return }
+                    // Consume only after AppKit accepts focus. Failed or detached attempts stay pending.
+                    guard self.model.consumeReaderFocus(requestID) else { return }
+                    text.scrollRangeToVisible(text.selectedRange())
+                    NSAccessibility.post(element: text, notification: .focusedUIElementChanged)
+                }
+            }
+
             func textViewDidChangeSelection(_ notification: Notification) {
                 guard !updating, !singleLine, let text = notification.object as? NSTextView else { return }
                 model.caretMoved(toUTF16Offset: text.selectedRange().location)

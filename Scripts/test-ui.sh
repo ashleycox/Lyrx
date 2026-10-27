@@ -4,8 +4,8 @@ set -eu
 cd "$(dirname "$0")/.."
 
 usage() {
-    echo "Usage: Scripts/test-ui.sh [macOS|iOS] [smoke|focus|settings|large-text|all]"
-    echo "Defaults: macOS smoke. focus is Mac-only; settings and large-text are iOS-only."
+    echo "Usage: Scripts/test-ui.sh [macOS|iOS] [smoke|focus|reader-focus|settings|large-text|all]"
+    echo "Defaults: macOS smoke. focus and reader-focus are Mac-only; settings and large-text are iOS-only."
 }
 if [ "${1:-}" = "--help" ]; then usage; exit 0; fi
 if [ "$#" -gt 2 ]; then usage >&2; exit 2; fi
@@ -19,13 +19,14 @@ esac
 case "$ui_scope" in
     smoke) ui_test=testSearchAndLineNavigation ;;
     focus) ui_test=testBrowsingTableKeepsKeyboardFocus ;;
+    reader-focus) ui_test=testSearchAndFocusLyricsShortcut ;;
     settings) ui_test=testProviderProtectionAndPlatformCopy ;;
     large-text) ui_test=testLargestTextKeepsReadingControlsReachable ;;
     all) ui_test= ;;
     *) usage >&2; exit 2 ;;
 esac
 case "$ui_platform:$ui_scope" in
-    iOS:focus|macOS:settings|macOS:large-text) usage >&2; exit 2 ;;
+    iOS:focus|iOS:reader-focus|macOS:settings|macOS:large-text) usage >&2; exit 2 ;;
 esac
 
 ui_destination="${LYRX_UI_DESTINATION:-}"

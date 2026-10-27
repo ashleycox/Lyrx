@@ -84,6 +84,30 @@ final class LyrxUITests: XCTestCase {
     #endif
 
     #if os(macOS)
+        @MainActor func testSearchAndFocusLyricsShortcut() {
+            let app = launch()
+            search(app)
+            let reader = app.textViews["lyricReader"]
+            let searchField = app.textFields["searchField"]
+            XCTAssertTrue(reader.waitForExistence(timeout: 5))
+            // Application-level input exposes focus left in Search; targeting the reader would hide it.
+            app.typeKey("z", modifierFlags: [])
+            XCTAssertEqual(searchField.value as? String, "x")
+
+            app.typeKey("f", modifierFlags: .command)
+            app.typeKey("a", modifierFlags: .command)
+            app.typeText("y\n")
+            XCTAssertTrue(reader.waitForExistence(timeout: 3))
+            app.typeKey("z", modifierFlags: [])
+            XCTAssertEqual(searchField.value as? String, "y")
+
+            app.typeKey("f", modifierFlags: .command)
+            app.typeKey("l", modifierFlags: .command)
+            app.typeKey("z", modifierFlags: [])
+            XCTAssertEqual(searchField.value as? String, "y")
+            XCTAssertTrue((reader.value as? String)?.contains("Morning light across the room") == true)
+        }
+
         @MainActor func testBrowsingTableKeepsKeyboardFocus() {
             let app = launch()
             search(app)

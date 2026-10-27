@@ -12,7 +12,9 @@ Focus requests are consumed once. Core tests verify that browsing a match can up
 
 After Return, Up must no longer select the preceding instrumental row. This guards against leaving keyboard focus in the table without assuming that bare arrow keys move a read-only text caret on every system. The Mac smoke test checks that line controls are initially absent, enables them through the menu shortcut, checks Next Line, and hides them again without changing lyric content. Exact VoiceOver focus and braille routing still require the manual checks below.
 
-Use `Scripts/test-ui.sh macOS focus` for this regression, `Scripts/test-ui.sh iOS large-text` for Dynamic Type layout, and `Scripts/test-ui.sh iOS settings` for provider controls. The default runner selects one Mac smoke test. Broader suites are explicit and are not run on every push; see the verification policy in `AGENTS.md`.
+Use `Scripts/test-ui.sh macOS focus` for table navigation, `Scripts/test-ui.sh macOS reader-focus` for repeated searches and Command–L from Search, `Scripts/test-ui.sh iOS large-text` for Dynamic Type layout, and `Scripts/test-ui.sh iOS settings` for provider controls. The default runner selects one Mac smoke test. Broader suites are explicit and are not run on every push; see the verification policy in `AGENTS.md`.
+
+The Mac reader keeps a focus request pending until its text view has a window and AppKit accepts it as first responder. Attachment retries a request that arrived before the view was ready. Successful requests are consumed once, so later layout updates cannot replay them. The reader-focus check sends input at application level to detect keyboard focus left in Search; it does not prove VoiceOver cursor or physical braille routing.
 
 ## Runtime checks performed
 

@@ -6,7 +6,7 @@ Search by song title, artist, or both. Lyrx searches your enabled services, rank
 
 ## Reading
 
-On Mac, press **Command–F**, enter your search, and press **Return**. **Command–L** focuses the lyrics again. On iPhone and iPad, enter your query and use Search. Read within the native text control using your normal VoiceOver text navigation and braille panning.
+On Mac, press **Command–F**, enter your search, and press **Return**. **Command–L** (**Lyrics → Focus Lyrics**) returns to the loaded lyric text from Search or Other Matches, keeping your current reading position. The command is available once lyric text has loaded and can be formatted. On iPhone and iPad, enter your query and use Search. Read within the native text control using your normal VoiceOver text navigation and braille panning.
 
 **Show line controls and highlighting** in Settings is an optional visual reading aid, off by default. It adds Previous Line and Next Line buttons, a position count, and a background highlight on the current line's text. It tracks the text caret, not VoiceOver's cursor or braille position. On Mac, **Command–Shift–N** toggles it; the Lyrics menu and **Command–Option–Up/Down Arrow** also move between formatted lines. On iOS, line navigation is available through the reader's VoiceOver actions. Enable the controls to navigate one-line mode by touch.
 
@@ -79,7 +79,7 @@ Scripts/test-ui.sh macOS focus
 Scripts/test-ui.sh iOS large-text
 ```
 
-Available scopes are `smoke` (either platform), `focus` (Mac), `settings` and `large-text` (iOS), and `all` (the selected platform). Use `Scripts/test-ui.sh iOS all` for the full iPhone suite. Broader coverage belongs before releases or when a shared interface change warrants it, rather than after every edit.
+Available scopes are `smoke` (either platform), `focus` (Mac table navigation), `reader-focus` (Mac search and Command–L), `settings` and `large-text` (iOS), and `all` (the selected platform). Use `Scripts/test-ui.sh iOS all` for the full iPhone suite. Broader coverage belongs before releases or when a shared interface change warrants it, rather than after every edit.
 
 The runner reuses `Scripts/verify.sh` build directories, prefers an already booted compatible iPhone simulator, and disables parallel simulator clones. `LYRX_BUILD_ROOT` changes the shared build root; `LYRX_UI_BUILD_ROOT` overrides just the UI output directory. `LYRX_UI_DESTINATION` selects a specific destination on the requested platform, including an iPad simulator. Tests have a 60-second timeout because [XCTest rounds allowances up to whole minutes](https://developer.apple.com/documentation/xctest/xctestcase/executiontimeallowance); build and boot time are separate. The warm smoke-test target is under 15 seconds of test execution, with other focused tests under 30 seconds.
 

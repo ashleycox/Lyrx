@@ -8,9 +8,9 @@ on:
         options: [macOS, iOS]
         default: macOS
       scope:
-        description: Check (focus is Mac-only; settings and large-text are iOS-only)
+        description: Check (focus and reader-focus are Mac-only; settings and large-text are iOS-only)
         type: choice
-        options: [smoke, focus, settings, large-text, all]
+        options: [smoke, focus, reader-focus, settings, large-text, all]
         default: smoke
 permissions:
   contents: read
