@@ -24,7 +24,11 @@ struct HTTPClient: HTTPTransport {
         guard let response = response as? HTTPURLResponse else { throw LyricServiceError.invalidResponse }
         guard response.url?.scheme == "https" else { throw LyricServiceError.invalidResponse }
         guard (200..<300).contains(response.statusCode) else {
-            throw response.statusCode == 404 ? LyricServiceError.noLyrics : .unavailable(response.statusCode)
+            throw response.statusCode == 404
+                ? LyricServiceError.noLyrics
+                : .unavailable(
+                    response.statusCode,
+                    retryAfterSeconds: Self.retryAfterSeconds(response.value(forHTTPHeaderField: "Retry-After")))
         }
         guard response.expectedContentLength <= Self.maximumBytes else { throw LyricServiceError.tooLarge }
         var data = Data()
@@ -36,5 +40,13 @@ struct HTTPClient: HTTPTransport {
         }
         try Task.checkCancellation()
         return data
+    }
+
+    /// Accept delta-seconds only. Unsupported dates or malformed values never trigger an early retry.
+    static func retryAfterSeconds(_ header: String?) -> Int? {
+        guard let value = header?.trimmingCharacters(in: .whitespacesAndNewlines),
+            !value.isEmpty, value.utf8.allSatisfy({ (48...57).contains($0) })
+        else { return nil }
+        return Int(value)
     }
 }

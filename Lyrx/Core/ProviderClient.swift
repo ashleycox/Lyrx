@@ -18,7 +18,7 @@ struct SearchResponse: Sendable {
 
 /// Runs independent services concurrently; one failing service does not discard another's results.
 struct ProviderClient: LyricSearching {
-    var transport: any HTTPTransport = HTTPClient()
+    var transport: any HTTPTransport = RetryingHTTPTransport()
 
     func search(_ request: SearchRequest, enabled: Set<LyricProviderID>) async throws -> SearchResponse {
         let cleaned = request.cleaned

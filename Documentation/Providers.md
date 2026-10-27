@@ -22,6 +22,7 @@ This optional provider broadens lookup options without requiring an embedded sec
 
 - Only explicitly enabled services receive direct requests, and only on search submission or result selection.
 - Requests use HTTPS and an ephemeral URLSession without persistent cookies or cache. Each request has a 12-second inactivity timeout and an 18-second resource timeout. Streaming responses are capped at 4 MiB.
+- A GET that returns 429 or 503 with a numeric `Retry-After` of zero to two seconds is retried once after at least that delay (a minimum one-second pause). There is no retry for longer delays, date-form headers, absent/malformed headers, other errors, or non-GET requests. Cancellation interrupts the wait. A second failure is surfaced normally; disabled providers are never enabled as a fallback.
 - Independent searches run as structured child tasks. One service's failure produces a service-specific notice while the others continue.
 - Ranking favors matching title and artist, then usable text; ties are deterministic. Exact text and normalized token overlap are heuristics, not certainty.
 - Automatic loading tries up to five non-instrumental candidates, stopping at the first usable lyric. If only instrumentals exist, one can be shown explicitly as instrumental. Manual selection can load any returned candidate.
@@ -34,6 +35,8 @@ This optional provider broadens lookup options without requiring an embedded sec
 Both live search endpoints returned the expected JSON structure during development. Deterministic tests cover fixtures, unavailable and malformed responses, path/query encoding, missing fields, LRC fallback, and disabled-provider behavior. Public endpoints are not called by automated unit tests. No copyrighted lyric fixtures are committed.
 
 LRCLIB subsequently returned HTTP 503 for a direct search during investigation on 27 October 2026. This is a service failure, not a no-match result. Keep another provider enabled for availability; a successful request at another time does not establish that an outage has been resolved. Lyrx displays the status code and retains successful results from other enabled providers.
+
+A follow-up probe received a successful free-text search and a 503 metadata search with `Retry-After: 1` and `ServerOverloaded`. The [server architecture](https://github.com/tranxuanthang/lrclib/blob/main/ARCHITECTURE.md) documents this response when its work queue is saturated. Lyrx now honors that short backoff once. Fixture tests cover recovery, persistent overload, unsupported delays, non-GET requests, and cancellation without network calls or timed sleeps.
 
 ## Additional providers reviewed
 
