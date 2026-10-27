@@ -6,9 +6,14 @@ import Testing
 private actor FixtureTransport: HTTPTransport {
     var requests: [URLRequest] = []
     let bodies: [String: String]
-    init(_ bodies: [String: String]) { self.bodies = bodies }
+    let failures: [String: LyricServiceError]
+    init(_ bodies: [String: String], failures: [String: LyricServiceError] = [:]) {
+        self.bodies = bodies
+        self.failures = failures
+    }
     func data(for request: URLRequest) async throws -> Data {
         requests.append(request)
+        if let host = request.url?.host, let failure = failures[host] { throw failure }
         guard let host = request.url?.host, let body = bodies[host] else { throw URLError(.timedOut) }
         return Data(body.utf8)
     }
@@ -39,6 +44,16 @@ struct ProviderTests {
         let result = try await ProviderClient(transport: transport).search(.init(query: "Harbor"), enabled: [.lrclib])
         #expect(result.matches.isEmpty)
         #expect(result.notices.count == 1)
+    }
+    @Test func lrclib503PreservesOVHResultsAndStatusCode() async throws {
+        let transport = FixtureTransport(
+            ["api.lyrics.ovh": #"{"data":[{"id":7,"title":"Harbor","artist":{"name":"Test Artist"}}]}"#],
+            failures: ["lrclib.net": .unavailable(503)])
+        let result = try await ProviderClient(transport: transport).search(
+            .init(query: "Harbor"), enabled: Set(LyricProviderID.allCases))
+        #expect(result.matches.map(\.provider) == [.lyricsOVH])
+        #expect(result.notices.map(\.provider) == [.lrclib])
+        #expect(result.notices.first?.message.contains("HTTP 503") == true)
     }
     @Test func lyricsCanComeFromLRCOnly() async throws {
         let transport = FixtureTransport([

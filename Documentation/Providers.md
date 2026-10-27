@@ -32,3 +32,13 @@ This optional provider broadens lookup options without requiring an embedded sec
 ## Checks
 
 Both live search endpoints returned the expected JSON structure during development. Deterministic tests cover fixtures, unavailable and malformed responses, path/query encoding, missing fields, LRC fallback, and disabled-provider behavior. Public endpoints are not called by automated unit tests. No copyrighted lyric fixtures are committed.
+
+LRCLIB subsequently returned HTTP 503 for a direct search during investigation on 27 October 2026. This is a service failure, not a no-match result. Keep another provider enabled for availability; a successful request at another time does not establish that an outage has been resolved. Lyrx displays the status code and retains successful results from other enabled providers.
+
+## Additional providers reviewed
+
+These are research candidates, not enabled or integrated services.
+
+- **[lrc.red](https://lrc.red/api)** documents a free public API with title/artist search, track metadata, TTML, and timed LRC downloads. Its search endpoint returned JSON results during this review. Its terms require an identifying User-Agent with an app link and contact email, plus visible linked attribution wherever its data appears. Integration needs a designated public app contact, attribution links, and a TTML parser for tracks without LRC. A successful search alone does not verify lyric coverage or reliability; the service also reports recent capacity problems.
+- **[LrcShare](https://api.lrcshare.com/docs/guide/quickstart.html)** offers a free key-based API, a catalog/session step, and full lyric downloads. Its curated catalog focuses on Chinese rap and lyrics. The current quick-start instructions require an API key, even though older FAQ text still describes anonymous access. No key was requested or embedded, and authenticated lyric retrieval was not tested.
+- **[ChartLyrics](https://www.chartlyrics.com/api.aspx)** has a legacy public API, but HTTPS checks of both its documentation host and API host failed certificate hostname validation during this review. It is not suitable for integration unless secure access is restored. Lyrx must not bypass certificate checks or add an insecure HTTP exception.
