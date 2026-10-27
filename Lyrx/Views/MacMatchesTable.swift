@@ -37,6 +37,9 @@
             table.target = context.coordinator
             table.doubleAction = #selector(Coordinator.readSelected)
             table.readSelection = { [weak coordinator = context.coordinator] in coordinator?.readSelected() }
+            table.beganBrowsing = { [weak coordinator = context.coordinator] in
+                coordinator?.model.beginBrowsingMatches()
+            }
             let menu = NSMenu()
             menu.autoenablesItems = false
             let item = NSMenuItem(title: "Read Lyrics", action: #selector(Coordinator.readFromMenu), keyEquivalent: "")
@@ -92,6 +95,7 @@
             table.dataSource = nil
             table.menu?.delegate = nil
             table.readSelection = nil
+            table.beganBrowsing = nil
         }
 
         @MainActor final class Coordinator: NSObject, NSTableViewDataSource, NSTableViewDelegate, NSMenuDelegate {
@@ -182,6 +186,13 @@
     /// All navigation remains AppKit's; only Return and keypad Enter open the selected lyric.
     final class ResultsTableView: NSTableView {
         var readSelection: (() -> Void)?
+        var beganBrowsing: (() -> Void)?
+
+        override func becomeFirstResponder() -> Bool {
+            let accepted = super.becomeFirstResponder()
+            if accepted { beganBrowsing?() }
+            return accepted
+        }
 
         override func menu(for event: NSEvent) -> NSMenu? {
             let clicked = row(at: convert(event.locationInWindow, from: nil))

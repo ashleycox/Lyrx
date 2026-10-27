@@ -59,6 +59,26 @@ import SwiftUI
             text.textColor = .textColor
             text.backgroundColor = .textBackgroundColor
             text.setAccessibilityLabel(settings.singleLine ? "Lyrics, \(model.lineStatus)" : "Lyrics")
+            let highlight =
+                settings.showLineControls
+                ? (settings.singleLine
+                    ? NSRange(location: 0, length: content.utf16.count)
+                    : model.document.ranges[model.currentLine]) : nil
+            if changed || coordinator.lastHighlight != highlight {
+                coordinator.lastHighlight = highlight
+                if let storage = text.textStorage {
+                    // Background attributes provide a visual marker without selecting words,
+                    // changing plain text, or moving the VoiceOver cursor.
+                    storage.beginEditing()
+                    storage.removeAttribute(.backgroundColor, range: NSRange(location: 0, length: storage.length))
+                    if let highlight {
+                        storage.addAttribute(
+                            .backgroundColor, value: NSColor.selectedTextBackgroundColor.withAlphaComponent(0.25),
+                            range: highlight)
+                    }
+                    storage.endEditing()
+                }
+            }
             if changed || coordinator.lastSelection != model.selectionID {
                 coordinator.lastSelection = model.selectionID
                 let offset = settings.singleLine ? 0 : model.document.ranges[model.currentLine].location
@@ -89,6 +109,7 @@ import SwiftUI
             var model: ReaderModel
             var lastFocus: UUID?
             var lastSelection: UUID?
+            var lastHighlight: NSRange?
             var updating = false
             var singleLine = false
             var focusTask: Task<Void, Never>?
@@ -154,6 +175,21 @@ import SwiftUI
             let changed = text.text != content
             if changed { text.text = content }
             text.accessibilityLabel = settings.singleLine ? "Lyrics, \(model.lineStatus)" : "Lyrics"
+            let highlight =
+                settings.showLineControls
+                ? (settings.singleLine
+                    ? NSRange(location: 0, length: content.utf16.count)
+                    : model.document.ranges[model.currentLine]) : nil
+            if changed || coordinator.lastHighlight != highlight {
+                coordinator.lastHighlight = highlight
+                let storage = text.textStorage
+                storage.beginEditing()
+                storage.removeAttribute(.backgroundColor, range: NSRange(location: 0, length: storage.length))
+                if let highlight {
+                    storage.addAttribute(.backgroundColor, value: UIColor.tertiarySystemFill, range: highlight)
+                }
+                storage.endEditing()
+            }
             if changed || coordinator.lastSelection != model.selectionID {
                 coordinator.lastSelection = model.selectionID
                 let offset = settings.singleLine ? 0 : model.document.ranges[model.currentLine].location
@@ -183,6 +219,7 @@ import SwiftUI
             var model: ReaderModel
             var lastFocus: UUID?
             var lastSelection: UUID?
+            var lastHighlight: NSRange?
             var singleLine = false
             var updating = false
             var focusTask: Task<Void, Never>?

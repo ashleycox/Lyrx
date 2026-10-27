@@ -72,6 +72,13 @@ struct SettingsView: View {
                 )
             }
             Section {
+                Toggle("Show line controls and highlighting", isOn: $settings.showLineControls)
+                    .accessibilityHint(
+                        "Shows line navigation buttons, a position count, and a highlight for the current line."
+                    )
+                    #if os(macOS)
+                        .help("Show line controls and highlighting (Command–Shift–N)")
+                    #endif
                 Toggle("Show one line at a time", isOn: $settings.singleLine).keyboardShortcut(
                     "1", modifiers: [.command, .option])
                 Toggle("Use a monospaced lyric font", isOn: $settings.monospaced).keyboardShortcut(
@@ -88,11 +95,11 @@ struct SettingsView: View {
             } footer: {
                 #if os(macOS)
                     Text(
-                        "Use the Lyrics menu to adjust text size and move between lines. One-line mode keeps only the current line in the text control. System Zoom is available in Accessibility settings."
+                        "Line controls and highlighting are optional visual reading aids. Use VoiceOver's text navigation and braille panning to read normally. One-line mode keeps only the current line; the Lyrics menu also provides line commands."
                     )
                 #else
                     Text(
-                        "Text follows your preferred text size in Accessibility settings. One-line mode keeps only the current line in the text control; use the Previous Line and Next Line buttons or VoiceOver actions to move."
+                        "Text follows your preferred text size in Accessibility settings. Line controls and highlighting are optional visual reading aids. In one-line mode, enable the controls to move by touch, or use the reader's VoiceOver actions."
                     )
                 #endif
             }

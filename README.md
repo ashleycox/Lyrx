@@ -6,7 +6,9 @@ Search by song title, artist, or both. Lyrx searches your enabled services, rank
 
 ## Reading
 
-On Mac, press **Command–F**, enter your search, and press **Return**. Use the Lyrics menu or **Command–Option–Up/Down Arrow** to move between formatted lines. **Command–L** focuses the lyrics again. On iPhone and iPad, use Search, the Previous Line and Next Line buttons, or the reader's VoiceOver actions. Standard VoiceOver text navigation and braille panning remain available.
+On Mac, press **Command–F**, enter your search, and press **Return**. **Command–L** focuses the lyrics again. On iPhone and iPad, enter your query and use Search. Read within the native text control using your normal VoiceOver text navigation and braille panning.
+
+**Show line controls and highlighting** in Settings is an optional visual reading aid, off by default. It adds Previous Line and Next Line buttons, a position count, and a background highlight on the current line's text. It tracks the text caret, not VoiceOver's cursor or braille position. On Mac, **Command–Shift–N** toggles it; the Lyrics menu and **Command–Option–Up/Down Arrow** also move between formatted lines. On iOS, line navigation is available through the reader's VoiceOver actions. Enable the controls to navigate one-line mode by touch.
 
 - The default **40-character hard limit** counts letters, spaces, and punctuation. A word that does not fit moves intact to the next line.
 - A word longer than the entire limit pauses formatting with an explanation. Increase the limit or choose **Unlimited**; words are never truncated or split.
@@ -16,13 +18,15 @@ On Mac, press **Command–F**, enter your search, and press **Return**. Use the 
 
 Text width counts Unicode extended grapheme clusters, not translated braille cells. Contractions, capital indicators, and other translation choices can change the cell count. Set the width to suit your display and translation table. This app does not implement a braille driver or change system braille settings.
 
-Show Filters to narrow results by artist, title, or album. Other Matches is collapsible; selecting a result replaces the current lyric. Songwriter filtering is not offered because these APIs do not reliably supply songwriter metadata. Automatic loading tries at most five vocal candidates; all returned matches remain available for manual selection. Instrumentals can be selected explicitly.
+Show Filters to narrow results by artist, title, or album. Selecting another match replaces the current lyric. Songwriter filtering is not offered because these APIs do not reliably supply songwriter metadata. Automatic loading tries at most five vocal candidates; all returned matches remain available for manual selection. Instrumentals can be selected explicitly.
 
-On Mac, Other Matches is a native table with title, artist, album, and provider columns. Command–Option–M opens and focuses the table, or closes it and returns to the reader. Arrow keys browse rows and update the lyrics without moving focus out of the table. Press Return, double-click a row, or choose Read Lyrics from its context menu to enter the reader. Command–L also returns to the loaded lyric. On iPhone and iPad, results remain individually accessible buttons.
+On Mac, Other Matches is a native table with title, artist, album, and provider columns, always visible when results are available. Command–Option–M focuses the table. Arrow keys browse rows and update the lyrics without moving focus out of the table. Press Return, double-click a row, or choose Read Lyrics from its context menu to enter the reader. Command–L also returns to the loaded lyric. On iPhone and iPad, Other Matches remains collapsible, with individually accessible result buttons.
 
 ## Services and privacy
 
 [LRCLIB](https://lrclib.net/docs) is enabled by default. [lyrics.ovh](https://github.com/NTag/lyrics.ovh) is optional. Both public APIs work without an embedded API key. Settings always keeps at least one service enabled. Service errors are shown separately, so a failed provider does not discard successful results from another.
+
+LRCLIB can return HTTP 503 when overloaded. Lyrx retries a read once when a 429 or 503 response asks for a wait of at most two seconds. Longer waits and persistent failures are reported without repeated requests. Keeping lyrics.ovh enabled provides another lookup option; a retry cannot resolve a sustained service outage.
 
 Searches happen only on submission. Enabled providers receive search terms and the network IP address. lyrics.ovh obtains suggestions from Deezer and may query other lyric services, including LRCLIB, internally; its switch controls Lyrx's direct use of that service. The app uses ephemeral networking, stores only preferences, and includes no analytics, search history, on-disk lyric cache, account, or cloud sync. See [provider research](Documentation/Providers.md).
 

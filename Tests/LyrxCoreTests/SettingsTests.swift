@@ -9,6 +9,11 @@ import Testing
         let defaults = try #require(UserDefaults(suiteName: name))
         defer { defaults.removePersistentDomain(forName: name) }
         let settings = AppSettings(defaults: defaults)
+        #expect(!settings.showLineControls)
+        settings.showLineControls = true
+        #expect(AppSettings(defaults: defaults).showLineControls)
+        settings.showLineControls = false
+        #expect(!AppSettings(defaults: defaults).showLineControls)
         #expect(settings.enabledProviders == [.lrclib])
         #expect(!settings.setEnabled(false, provider: .lrclib))
         #expect(settings.setEnabled(true, provider: .lyricsOVH))

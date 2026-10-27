@@ -177,21 +177,24 @@ final class ReaderModel {
         return true
     }
 
-    /// The menu shortcut enters results directly; clicking the disclosure keeps focus on its button.
-    func toggleMatches(focusResults: Bool = false) {
+    /// iOS keeps its disclosure; Mac results are always visible when matches are available.
+    func toggleMatches() {
         guard !matches.isEmpty else { return }
         showMatches.toggle()
-        // A slow lyric request must not interrupt someone who has started exploring results.
-        if showMatches { shouldFocusSearchResult = false }
-        pendingMatchesFocusID = nil
-        if focusResults {
-            if showMatches {
-                pendingReaderFocusID = nil
-                pendingMatchesFocusID = UUID()
-            } else {
-                focusReader()
-            }
-        }
+        if showMatches { beginBrowsingMatches() }
+    }
+
+    /// Entering the persistent Mac table never hides it or toggles focus back into the reader.
+    func focusMatches() {
+        guard !matches.isEmpty else { return }
+        beginBrowsingMatches()
+        pendingMatchesFocusID = UUID()
+    }
+
+    /// Mouse, keyboard, and accessibility entry all take priority over a slow automatic lyric load.
+    func beginBrowsingMatches() {
+        shouldFocusSearchResult = false
+        pendingReaderFocusID = nil
     }
 
     func consumeMatchesFocus(_ requestID: UUID) -> Bool {

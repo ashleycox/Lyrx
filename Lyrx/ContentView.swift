@@ -186,7 +186,7 @@ struct ContentView: View {
                     .frame(minHeight: 220)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .overlay { RoundedRectangle(cornerRadius: 8).stroke(.separator) }
-                lineControls
+                if settings.showLineControls { lineControls }
             } else {
                 ContentUnavailableView {
                     Label(
@@ -215,10 +215,10 @@ struct ContentView: View {
             HStack {
                 navigationButtons
                 Spacer()
-                Text(model.lineStatus).monospacedDigit()
+                Text(model.lineStatus).monospacedDigit().accessibilityIdentifier("linePosition")
             }
             VStack(alignment: .leading, spacing: 8) {
-                Text(model.lineStatus).monospacedDigit()
+                Text(model.lineStatus).monospacedDigit().accessibilityIdentifier("linePosition")
                 navigationButtons
             }
         }.font(.callout)

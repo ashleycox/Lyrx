@@ -1,30 +1,30 @@
 import SwiftUI
 
-/// Each platform uses its own native interaction for the collapsible search results.
+/// Mac results stay visible; iPhone and iPad retain a compact disclosure.
 struct MatchesView: View {
     @Bindable var model: ReaderModel
     let settings: AppSettings
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Button {
-                model.toggleMatches()
-            } label: {
-                Label(
-                    "Other Matches (\(model.matches.count))",
-                    systemImage: model.showMatches ? "chevron.down" : "chevron.right"
-                )
-                .fixedSize(horizontal: false, vertical: true)
-            }
-            #if os(iOS)
+            #if os(macOS)
+                Text("Other Matches (\(model.matches.count))")
+                    .font(.headline).accessibilityAddTraits(.isHeader)
+                MacMatchesTable(model: model, settings: settings)
+                    .frame(height: 192)
+            #else
+                Button {
+                    model.toggleMatches()
+                } label: {
+                    Label(
+                        "Other Matches (\(model.matches.count))",
+                        systemImage: model.showMatches ? "chevron.down" : "chevron.right"
+                    )
+                    .fixedSize(horizontal: false, vertical: true)
+                }
                 .keyboardShortcut("m", modifiers: [.command, .option])
-            #endif
-            .accessibilityValue(model.showMatches ? "Expanded" : "Collapsed")
-            .accessibilityIdentifier("matchesDisclosure")
-            if model.showMatches {
-                #if os(macOS)
-                    MacMatchesTable(model: model, settings: settings)
-                        .frame(height: 192)
-                #else
+                .accessibilityValue(model.showMatches ? "Expanded" : "Collapsed")
+                .accessibilityIdentifier("matchesDisclosure")
+                if model.showMatches {
                     ScrollView {
                         LazyVStack(alignment: .leading, spacing: 0) {
                             ForEach(model.matches) { match in
@@ -52,8 +52,8 @@ struct MatchesView: View {
                             }
                         }
                     }.frame(maxHeight: 180).accessibilityLabel("Other matches")
-                #endif
-            }
+                }
+            #endif
         }
     }
 }

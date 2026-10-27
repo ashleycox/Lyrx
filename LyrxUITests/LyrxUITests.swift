@@ -36,15 +36,25 @@ final class LyrxUITests: XCTestCase {
         let reader = app.textViews["lyricReader"]
         XCTAssertTrue(reader.waitForExistence(timeout: 5))
         XCTAssertTrue((reader.value as? String)?.contains("Morning light across the room") == true)
+        XCTAssertFalse(app.buttons["Next Line"].exists)
+        XCTAssertFalse(app.staticTexts["linePosition"].exists)
         #if os(macOS)
+            let originalText = reader.value as? String
+            // The menu shortcut changes the real preference without opening another window.
+            app.typeKey("n", modifierFlags: [.command, .shift])
+            XCTAssertTrue(app.buttons["Next Line"].waitForExistence(timeout: 3))
             app.buttons["Next Line"].click()
+            XCTAssertTrue(
+                app.staticTexts.containing(
+                    NSPredicate(format: "label CONTAINS %@ OR value CONTAINS %@", "Line 2 of", "Line 2 of")
+                ).firstMatch.exists)
+            XCTAssertEqual(reader.value as? String, originalText)
+            app.typeKey("n", modifierFlags: [.command, .shift])
+            XCTAssertFalse(app.buttons["Next Line"].exists)
+            XCTAssertFalse(app.staticTexts["linePosition"].exists)
         #else
-            app.buttons["Next Line"].tap()
+            XCTAssertEqual(app.buttons["matchesDisclosure"].value as? String, "Collapsed")
         #endif
-        XCTAssertTrue(
-            app.staticTexts.containing(
-                NSPredicate(format: "label CONTAINS %@ OR value CONTAINS %@", "Line 2 of", "Line 2 of")
-            ).firstMatch.exists)
     }
 
     #if os(iOS)
@@ -67,8 +77,9 @@ final class LyrxUITests: XCTestCase {
             let reader = app.textViews["lyricReader"]
             XCTAssertTrue(reader.waitForExistence(timeout: 5))
             XCTAssertGreaterThanOrEqual(reader.frame.height, 200)
-            for _ in 0..<6 where !app.buttons["Next Line"].isHittable { app.swipeUp() }
-            XCTAssertTrue(app.buttons["Next Line"].isHittable)
+            let matches = app.buttons["matchesDisclosure"]
+            for _ in 0..<6 where !matches.isHittable { app.swipeUp() }
+            XCTAssertTrue(matches.isHittable)
         }
     #endif
 
@@ -78,9 +89,12 @@ final class LyrxUITests: XCTestCase {
             search(app)
             let reader = app.textViews["lyricReader"]
             XCTAssertTrue(reader.waitForExistence(timeout: 5))
-            app.typeKey("m", modifierFlags: [.command, .option])
             let table = app.tables["matchesTable"]
             XCTAssertTrue(table.waitForExistence(timeout: 5))
+            XCTAssertFalse(app.buttons["matchesDisclosure"].exists)
+            // Repeated focus commands must keep the always-visible table open.
+            app.typeKey("m", modifierFlags: [.command, .option])
+            app.typeKey("m", modifierFlags: [.command, .option])
             XCTAssertTrue((reader.value as? String)?.contains("Morning light across the room") == true)
             // Use application-level key events: targeting the table would conceal a focus jump.
             app.typeKey(.downArrow, modifierFlags: [])

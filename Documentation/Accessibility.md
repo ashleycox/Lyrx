@@ -2,13 +2,15 @@
 
 Lyrx uses a read-only, selectable NSTextView on macOS and UITextView on iOS. The text contains actual newline characters. Soft visual wrapping is disabled; longer lines can be panned horizontally. No custom braille translation or hardware transport is implemented.
 
+Line buttons, the position count, and highlighting are optional and off by default. The highlight uses native text background attributes without changing the text or selection. Its position follows the text caret rather than the VoiceOver cursor. Other Matches stays visible on Mac whenever results are available; its iOS disclosure remains collapsible.
+
 ## Automated coverage
 
 Core tests verify hard widths (including spaces and punctuation), intact words and Unicode graphemes, UTF-16 selection offsets, stanza preservation, punctuation boundaries, unlimited lines, oversized-word recovery, ranking, provider isolation, cancellation, and stale-response protection.
 
 Focus requests are consumed once. Core tests verify that browsing a match can update the lyric without requesting reader focus, and that an old focus request cannot be replayed after a text view is recreated. The focused Mac interface test checks an adjacent row, crosses the scroll boundary in one keyboard-input batch, and visits an instrumental result that temporarily removes the text view. Application-level key events detect focus escaping into the reader without a separate wait for every equivalent row.
 
-After Return, Up must no longer select the preceding instrumental row. This guards against leaving keyboard focus in the table without assuming that bare arrow keys move a read-only text caret on every system. The smoke test separately checks the Next Line action; exact VoiceOver focus and braille routing still require the manual checks below.
+After Return, Up must no longer select the preceding instrumental row. This guards against leaving keyboard focus in the table without assuming that bare arrow keys move a read-only text caret on every system. The Mac smoke test checks that line controls are initially absent, enables them through the menu shortcut, checks Next Line, and hides them again without changing lyric content. Exact VoiceOver focus and braille routing still require the manual checks below.
 
 Use `Scripts/test-ui.sh macOS focus` for this regression, `Scripts/test-ui.sh iOS large-text` for Dynamic Type layout, and `Scripts/test-ui.sh iOS settings` for provider controls. The default runner selects one Mac smoke test. Broader suites are explicit and are not run on every push; see the verification policy in `AGENTS.md`.
 
@@ -20,6 +22,7 @@ During development on 27 October 2026:
 - The Mac app was built with ad-hoc signing. Its resulting entitlements contained App Sandbox and outgoing network access, without cloud or push capabilities.
 - A live Mac search returned provider results and moved keyboard focus to the native lyric text control, confirmed through the accessibility tree. Mac table browsing now preserves results focus; explicitly reading a match moves focus into its lyrics.
 - Next Line advanced the current position. One-line mode exposed only the selected line, with an accessible line-number label. Returning to full text kept the position.
+- The optional visual guide was checked in the Mac app's dark appearance: Next Line moved the text background highlight and count together; disabling it removed the highlight, buttons, and count. The native text remained unchanged.
 - The Mac Settings accessibility tree exposed the last enabled provider as disabled, with an explanation. Provider labels were made explicit after inspection.
 - iPhone and iPad Simulator UI tests passed for search-to-reader behavior, line navigation, provider-toggle protection, and the largest Dynamic Type setting. Visual inspection caught a compressed reader at large text sizes; the layout now scrolls and tests assert a usable reader height.
 
@@ -37,7 +40,8 @@ Record OS versions, display model and firmware, connection type, braille table, 
 6. Test iPhone portrait and landscape, small screens, iPad split view, all Dynamic Type sizes, 300% lyric text, Zoom, dark mode, Increase Contrast, Bold Text, and Reduce Motion. Controls and error messages must remain reachable without clipping.
 7. Disable each provider in turn; the final enabled service must stay on. Search offline, cancel, repeat rapidly, switch matches mid-load, and change providers mid-search. Confirm errors are available to VoiceOver and that stale responses never replace newer content.
 8. Confirm platform-specific help: Mac screens describe menus and VoiceOver Utility; iOS screens describe touch and system Settings. Do not show instructions for another platform.
-9. On Mac, expand Other Matches and interact with the table using VoiceOver. Browse every row, scroll, resize the window, and expand filters. Focus must stay in the table while lyrics update. Return or Read Lyrics must focus the reader once. Test selections with missing lyrics, instrumentals, delayed responses, and formatting errors as well as successful results.
+9. On Mac, interact with the always-visible Other Matches table using VoiceOver. Browse every row, scroll, resize the window, and expand filters. Repeating Command–Option–M must keep the table visible and focused. Return or Read Lyrics must focus the reader once. Test selections with missing lyrics, instrumentals, delayed responses, and formatting errors as well as successful results.
+10. Enable line controls and highlighting. Check that Previous/Next Line moves the highlight with the position count, including after reformatting and changing songs. Disable the setting and confirm both the controls and highlight disappear. Check light/dark appearance and Increase Contrast. Blank stanza lines contain no text to highlight; the optional count still reports their position.
 
 ## References
 

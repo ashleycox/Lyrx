@@ -32,6 +32,10 @@ struct LyrxCommands: Commands {
                 .keyboardShortcut(.end, modifiers: [.command, .option]).disabled(reader?.hasLyrics != true)
             Divider()
             Toggle(
+                "Show Line Controls and Highlighting",
+                isOn: Binding(get: { settings.showLineControls }, set: { settings.showLineControls = $0 })
+            ).keyboardShortcut("n", modifiers: [.command, .shift])
+            Toggle(
                 "Show One Line at a Time",
                 isOn: Binding(get: { settings.singleLine }, set: { settings.singleLine = $0 })
             ).keyboardShortcut("1", modifiers: [.command, .option])
@@ -55,9 +59,15 @@ struct LyrxCommands: Commands {
         CommandMenu("Search Results") {
             Button("Show or Hide Filters") { reader?.showFilters.toggle() }.keyboardShortcut(
                 "f", modifiers: [.command, .option])
-            Button("Show or Hide Other Matches") { reader?.toggleMatches(focusResults: true) }
-                .keyboardShortcut("m", modifiers: [.command, .option])
-                .disabled(reader?.matches.isEmpty != false)
+            #if os(macOS)
+                Button("Focus Other Matches") { reader?.focusMatches() }
+                    .keyboardShortcut("m", modifiers: [.command, .option])
+                    .disabled(reader?.matches.isEmpty != false)
+            #else
+                Button("Show or Hide Other Matches") { reader?.toggleMatches() }
+                    .keyboardShortcut("m", modifiers: [.command, .option])
+                    .disabled(reader?.matches.isEmpty != false)
+            #endif
             Button("Previous Match") { selectRelative(-1) }.keyboardShortcut("[", modifiers: [.command, .option])
                 .disabled(reader?.matches.isEmpty != false)
             Button("Next Match") { selectRelative(1) }.keyboardShortcut("]", modifiers: [.command, .option]).disabled(

@@ -127,9 +127,9 @@ private actor SuspendedService: LyricSearching {
         #expect(model.readerFocusID == searchFocus)
         #expect(model.pendingReaderFocusID == nil)
 
-        model.toggleMatches(focusResults: true)
+        model.focusMatches()
         let tableFocus = try #require(model.pendingMatchesFocusID)
-        #expect(model.showMatches)
+        #expect(!model.showMatches)  // The iOS disclosure state is independent of Mac focus.
         #expect(model.consumeMatchesFocus(tableFocus))
         #expect(!model.consumeMatchesFocus(tableFocus))
         model.focusReader()
@@ -139,9 +139,15 @@ private actor SuspendedService: LyricSearching {
         #expect(!model.consumeReaderFocus(explicitFocus))
         await model.waitForCurrentOperation()
         #expect(model.pendingReaderFocusID == nil)
-        model.toggleMatches(focusResults: true)
+        model.focusMatches()
         #expect(!model.showMatches)
-        #expect(model.pendingReaderFocusID != nil)
+        #expect(model.pendingReaderFocusID == nil)
+        #expect(model.pendingMatchesFocusID != nil)
+        #expect(model.pendingMatchesFocusID != tableFocus)
+        model.toggleMatches()
+        #expect(model.showMatches)
+        model.toggleMatches()
+        #expect(!model.showMatches)
     }
     @Test func lateSearchCannotOverwriteNewerSearch() async {
         let (settings, defaults, name) = preferences()
@@ -163,7 +169,7 @@ private actor SuspendedService: LyricSearching {
         #expect(model.selected?.title == "New")
         #expect(!model.isSearching)
     }
-    @Test func openingMatchesDuringLoadingPreservesFocus() async throws {
+    @Test(arguments: [true, false]) func enteringMatchesDuringLoadingPreservesFocus(usingShortcut: Bool) async throws {
         let (settings, defaults, name) = preferences()
         defer { defaults.removePersistentDomain(forName: name) }
         let service = SuspendedService(delaysLyrics: true)
@@ -174,9 +180,13 @@ private actor SuspendedService: LyricSearching {
         await service.waitForRequest("Example")
         await service.complete("Example")
         await service.waitForLyrics()
-        model.toggleMatches(focusResults: true)
-        let tableFocus = try #require(model.pendingMatchesFocusID)
-        #expect(model.consumeMatchesFocus(tableFocus))
+        if usingShortcut {
+            model.focusMatches()
+            let tableFocus = try #require(model.pendingMatchesFocusID)
+            #expect(model.consumeMatchesFocus(tableFocus))
+        } else {
+            model.beginBrowsingMatches()
+        }
         await service.completeLyrics()
         await model.waitForCurrentOperation()
         #expect(model.hasLyrics)

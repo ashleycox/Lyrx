@@ -11,7 +11,7 @@ struct ReadingHelpView: View {
                             "Press Command–F, type a song title, artist, or both, then Return. The best available match opens in the lyric text control. Show Filters for artist, title, or album. Other Matches lets you choose another recording or source."
                         )
                         Text(
-                            "Command–Option–M opens and focuses the Other Matches table. It has title, artist, album, and provider columns. Selecting a row updates the lyrics while keeping focus in the table. Press Return, double-click, or choose Read Lyrics to move into the reader."
+                            "The Other Matches table stays visible after a search. Command–Option–M focuses it. Selecting a row updates the lyrics while keeping focus in the table. Press Return, double-click, or choose Read Lyrics to move into the reader."
                         )
                     #else
                         Text(
@@ -22,18 +22,30 @@ struct ReadingHelpView: View {
                 Section("Read with braille") {
                     #if os(macOS)
                         Text(
-                            "Lyrics use real line breaks in a native, read-only text control. Use your normal VoiceOver text-navigation and braille panning commands. Command–Option–Down Arrow moves to the next formatted line; Command–Option–Up Arrow goes back. Command–L returns focus to the lyrics."
+                            "Lyrics use real line breaks in a native, read-only text control. Use your normal VoiceOver text-navigation and braille panning commands. Command–L returns focus to the lyrics."
                         )
                         Text(
                             "Show One Line at a Time exposes only the current line. Blank lines mark stanza breaks. Configure your display and braille translation in VoiceOver Utility."
                         )
                     #else
                         Text(
-                            "Lyrics use real line breaks in a native, read-only text control. Use VoiceOver’s text rotor and your braille display’s panning controls, or move between formatted lines with the Previous Line and Next Line buttons. These are also available as VoiceOver actions on the lyrics."
+                            "Lyrics use real line breaks in a native, read-only text control. Use VoiceOver’s text rotor and your braille display’s panning controls. Next Line and Previous Line are also available as VoiceOver actions on the lyrics."
                         )
                         Text(
                             "Show One Line at a Time exposes only the current line. Blank lines mark stanza breaks. Configure your braille display in Settings, Accessibility, VoiceOver, Braille."
                         )
+                    #endif
+                }
+                Section("Optional visual line guide") {
+                    Text(
+                        "Show line controls and highlighting in Settings adds Previous Line and Next Line buttons, a position count, and a highlight on the current line. It is off by default. The position follows Lyrx's text caret, not the VoiceOver cursor or braille display."
+                    )
+                    #if os(macOS)
+                        Text(
+                            "Command–Shift–N toggles the visual guide. The Lyrics menu also provides line navigation commands."
+                        )
+                    #else
+                        Text("If you use one-line mode, enable the controls to move between lines by touch.")
                     #endif
                 }
                 Section("Fit your display") {

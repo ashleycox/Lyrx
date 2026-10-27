@@ -12,6 +12,8 @@ final class AppSettings {
     var monospaced: Bool { didSet { defaults.set(monospaced, forKey: "monospaced") } }
     var textScale: Double { didSet { defaults.set(textScale, forKey: "textScale") } }
     var singleLine: Bool { didSet { defaults.set(singleLine, forKey: "singleLine") } }
+    /// Optional visual reading aids; VoiceOver and braille use the native text independently.
+    var showLineControls: Bool { didSet { defaults.set(showLineControls, forKey: "showLineControls") } }
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
@@ -25,6 +27,7 @@ final class AppSettings {
         let scale = defaults.object(forKey: "textScale") as? Double ?? 1
         textScale = scale.isFinite ? min(max(scale, 1), 3) : 1
         singleLine = defaults.bool(forKey: "singleLine")
+        showLineControls = defaults.bool(forKey: "showLineControls")
     }
 
     var formatting: FormattingOptions {
