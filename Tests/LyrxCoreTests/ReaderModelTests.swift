@@ -5,10 +5,10 @@ import Testing
 
 private struct ImmediateService: LyricSearching {
     let matches: [LyricMatch]
-    func search(_ request: SearchRequest, enabled: Set<LyricProviderID>) async throws -> SearchResponse {
+    func search(_ request: SearchRequest, access: ProviderAccess) async throws -> SearchResponse {
         .init(matches: matches)
     }
-    func lyrics(for match: LyricMatch) async throws -> String {
+    func lyrics(for match: LyricMatch, access: ProviderAccess) async throws -> String {
         if match.instrumental { return "" }
         guard let lyrics = match.lyrics else { throw LyricServiceError.noLyrics }
         return lyrics
@@ -23,7 +23,7 @@ private actor SuspendedService: LyricSearching {
     private var pendingLyrics: CheckedContinuation<String, Never>?
     private var lyricsArrival: CheckedContinuation<Void, Never>?
     init(delaysLyrics: Bool = false) { self.delaysLyrics = delaysLyrics }
-    func search(_ request: SearchRequest, enabled: Set<LyricProviderID>) async throws -> SearchResponse {
+    func search(_ request: SearchRequest, access: ProviderAccess) async throws -> SearchResponse {
         await withCheckedContinuation { continuation in
             pending[request.query] = continuation
             arrivals.removeValue(forKey: request.query)?.resume()
@@ -40,7 +40,7 @@ private actor SuspendedService: LyricSearching {
                     provider: .lrclib, providerID: name, title: name, artist: "Test", lyrics: "First line\nSecond line")
             ]))
     }
-    func lyrics(for match: LyricMatch) async throws -> String {
+    func lyrics(for match: LyricMatch, access: ProviderAccess) async throws -> String {
         guard delaysLyrics else { return match.lyrics ?? "" }
         return await withCheckedContinuation { continuation in
             pendingLyrics = continuation

@@ -10,7 +10,7 @@ Lyrx is a native macOS, iPhone, and iPad lyric finder designed first for people 
 - Follow current Apple API and Human Interface Guidelines. Prefer SwiftUI and system components; use AppKit or UIKit text views where native selection, accessibility, and braille navigation need them.
 - Keep domain logic, provider networking, formatting, and platform UI separate. Document public types, non-obvious behavior, concurrency boundaries, and accessibility decisions without narrating obvious statements.
 - Use HTTPS, bounded requests, typed decoding, actionable errors, and cancellation. Do not scrape websites, embed secrets, silently contact disabled providers, or log search terms or lyric text.
-- Search only enabled providers. Persist provider preferences and enforce at least one enabled provider in the model as well as the interface. Preserve source attribution and describe API limitations honestly.
+- Search only enabled, configured providers. lrc.red requires a valid user-supplied contact email even when enabled; never supply a placeholder contact in production requests or leak it to another origin. Artist/album searches stay with their source provider and must not alter saved switches. Additional Info must preserve available public metadata and linked attribution without auto-fetching artwork or audio. Persist provider preferences and enforce at least one enabled provider in the model as well as the interface. Preserve source attribution and describe API limitations honestly.
 - Do not commit copyrighted lyric fixtures. Tests and previews use original example text. Lyrics remain in memory unless a later feature explicitly changes the privacy policy.
 
 ## Accessibility and formatting

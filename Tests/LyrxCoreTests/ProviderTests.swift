@@ -25,23 +25,27 @@ struct ProviderTests {
 
     @Test func disabledProviderReceivesNoRequest() async throws {
         let transport = FixtureTransport(["lrclib.net": record])
-        let response = try await ProviderClient(transport: transport).search(.init(query: "Harbor"), enabled: [.lrclib])
+        let response = try await ProviderClient(transport: transport).search(
+            .init(query: "Harbor"), access: .init(enabled: [.lrclib]))
         #expect(response.matches.count == 1)
         let requests = await transport.requests
         #expect(requests.count == 1)
         #expect(requests[0].url?.host == "lrclib.net")
         #expect(requests[0].value(forHTTPHeaderField: "Accept") == "application/json")
+        #expect(response.matches[0].metadata.contains { $0.label == "Instrumental" && $0.value == "No" })
+        #expect(!response.matches[0].metadata.contains { $0.value.contains("Original test line") })
     }
     @Test func providerFailureDoesNotLoseSuccessfulResults() async throws {
         let transport = FixtureTransport(["lrclib.net": record])
         let result = try await ProviderClient(transport: transport).search(
-            .init(query: "Harbor"), enabled: Set(LyricProviderID.allCases))
+            .init(query: "Harbor"), access: .init(enabled: Set(LyricProviderID.allCases)))
         #expect(result.matches.count == 1)
         #expect(result.notices.map(\.provider) == [.lyricsOVH])
     }
     @Test func malformedJSONIsReported() async throws {
         let transport = FixtureTransport(["lrclib.net": "<html>unavailable</html>"])
-        let result = try await ProviderClient(transport: transport).search(.init(query: "Harbor"), enabled: [.lrclib])
+        let result = try await ProviderClient(transport: transport).search(
+            .init(query: "Harbor"), access: .init(enabled: [.lrclib]))
         #expect(result.matches.isEmpty)
         #expect(result.notices.count == 1)
     }
@@ -50,7 +54,7 @@ struct ProviderTests {
             ["api.lyrics.ovh": #"{"data":[{"id":7,"title":"Harbor","artist":{"name":"Test Artist"}}]}"#],
             failures: ["lrclib.net": .unavailable(503)])
         let result = try await ProviderClient(transport: transport).search(
-            .init(query: "Harbor"), enabled: Set(LyricProviderID.allCases))
+            .init(query: "Harbor"), access: .init(enabled: Set(LyricProviderID.allCases)))
         #expect(result.matches.map(\.provider) == [.lyricsOVH])
         #expect(result.notices.map(\.provider) == [.lrclib])
         #expect(result.notices.first?.message.contains("HTTP 503") == true)
@@ -60,13 +64,14 @@ struct ProviderTests {
             "lrclib.net":
                 #"[{"id":1,"trackName":"Example","artistName":"Test","syncedLyrics":"[00:01.00]Original words"}]"#
         ])
-        let result = try await ProviderClient(transport: transport).search(.init(query: "Example"), enabled: [.lrclib])
+        let result = try await ProviderClient(transport: transport).search(
+            .init(query: "Example"), access: .init(enabled: [.lrclib]))
         #expect(result.matches.first?.lyrics == "Original words")
     }
     @Test func filtersAreURLQueryEncodedAndAppliedLocally() async throws {
         let transport = FixtureTransport(["lrclib.net": record])
         let result = try await ProviderClient(transport: transport).search(
-            .init(query: "A & B?", artist: "Other"), enabled: [.lrclib])
+            .init(query: "A & B?", artist: "Other"), access: .init(enabled: [.lrclib]))
         #expect(result.matches.isEmpty)
         let request = try #require(await transport.requests.first)
         let url = try #require(request.url)
@@ -75,7 +80,9 @@ struct ProviderTests {
     @Test func pathComponentsCannotInjectQueryOrPath() async throws {
         let transport = FixtureTransport(["api.lyrics.ovh": #"{"lyrics":"Original line"}"#])
         let match = LyricMatch(provider: .lyricsOVH, providerID: "1", title: "A?B#C%", artist: "AC/DC")
-        #expect(try await ProviderClient(transport: transport).lyrics(for: match) == "Original line")
+        #expect(
+            try await ProviderClient(transport: transport).lyrics(for: match, access: .init(enabled: [.lyricsOVH]))
+                == "Original line")
         let request = try #require(await transport.requests.first)
         let url = try #require(request.url)
         #expect(url.query == nil && url.fragment == nil)
@@ -85,17 +92,19 @@ struct ProviderTests {
     @Test func suggestionsDecodeMetadata() async throws {
         let transport = FixtureTransport([
             "api.lyrics.ovh":
-                #"{"data":[{"id":7,"title":"Harbor","artist":{"name":"Test Artist"},"album":{"title":"Dawn"}}]}"#
+                #"{"data":[{"id":7,"title":"Harbor","artist":{"name":"Test Artist"},"album":{"title":"Dawn"},"duration":123,"explicit_lyrics":false}]}"#
         ])
         let result = try await ProviderClient(transport: transport).search(
-            .init(query: "Harbor"), enabled: [.lyricsOVH])
+            .init(query: "Harbor"), access: .init(enabled: [.lyricsOVH]))
         #expect(result.matches.first?.album == "Dawn")
         #expect(result.matches.first?.provider == .lyricsOVH)
+        #expect(result.matches.first?.metadata.contains { $0.label == "Duration" && !$0.value.isEmpty } == true)
+        #expect(result.matches.first?.metadata.contains { $0.label == "Explicit lyrics" && $0.value == "No" } == true)
     }
     @Test func exactOVHFiltersSkipSuggestionLookup() async throws {
         let transport = FixtureTransport([:])
         let result = try await ProviderClient(transport: transport).search(
-            .init(artist: "Test", title: "Harbor"), enabled: [.lyricsOVH])
+            .init(artist: "Test", title: "Harbor"), access: .init(enabled: [.lyricsOVH]))
         #expect(result.matches.count == 1)
         #expect(await transport.requests.isEmpty)
     }
@@ -110,7 +119,7 @@ struct ProviderTests {
     @Test func cancellationIsNotAProviderWarning() async {
         let task = Task {
             try await ProviderClient(transport: FixtureTransport([:])).search(
-                .init(query: "Example"), enabled: [.lrclib])
+                .init(query: "Example"), access: .init(enabled: [.lrclib]))
         }
         task.cancel()
         do {

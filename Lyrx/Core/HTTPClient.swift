@@ -20,7 +20,9 @@ struct HTTPClient: HTTPTransport {
     }
 
     func data(for request: URLRequest) async throws -> Data {
-        let (bytes, response) = try await session.bytes(for: request)
+        let redirectPolicy: (any URLSessionTaskDelegate)? =
+            request.url?.host == "lrc.red" ? ContactRedirectPolicy() : nil
+        let (bytes, response) = try await session.bytes(for: request, delegate: redirectPolicy)
         guard let response = response as? HTTPURLResponse else { throw LyricServiceError.invalidResponse }
         guard response.url?.scheme == "https" else { throw LyricServiceError.invalidResponse }
         guard (200..<300).contains(response.statusCode) else {

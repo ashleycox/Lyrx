@@ -22,6 +22,9 @@ struct LyrxCommands: Commands {
         }
         CommandMenu("Lyrics") {
             Button("Focus Lyrics") { reader?.focusReader() }.keyboardShortcut("l").disabled(reader?.hasLyrics != true)
+            Button("Additional Info") {
+                if let reader, let match = reader.selected { reader.openInfo(for: match, settings: settings) }
+            }.keyboardShortcut("i").disabled(reader?.selected == nil || reader?.isSearching == true)
             Button("Previous Line") { if let reader { reader.go(to: reader.currentLine - 1) } }
                 .keyboardShortcut(.upArrow, modifiers: [.command, .option]).disabled(reader?.canGoBack != true)
             Button("Next Line") { if let reader { reader.go(to: reader.currentLine + 1) } }
@@ -57,6 +60,24 @@ struct LyrxCommands: Commands {
             }
         }
         CommandMenu("Search Results") {
+            Button("All Enabled Services") {
+                reader?.searchScope = nil
+                reader?.search(settings: settings)
+            }.keyboardShortcut("s", modifiers: [.command, .shift])
+                .disabled(reader?.searchScope == nil)
+            Button("More by This Artist") {
+                if let reader, let match = reader.selected {
+                    reader.searchRelated(.artist, match: match, settings: settings)
+                }
+            }.keyboardShortcut("a", modifiers: [.command, .shift])
+                .disabled(!canSearchRelated(.artist))
+            Button("More from This Album") {
+                if let reader, let match = reader.selected {
+                    reader.searchRelated(.album, match: match, settings: settings)
+                }
+            }.keyboardShortcut("b", modifiers: [.command, .shift])
+                .disabled(!canSearchRelated(.album))
+            Divider()
             Button("Show or Hide Filters") { reader?.showFilters.toggle() }.keyboardShortcut(
                 "f", modifiers: [.command, .option])
             #if os(macOS)
@@ -76,6 +97,11 @@ struct LyrxCommands: Commands {
         CommandGroup(replacing: .help) {
             Button("Lyrx Reading Help") { reader?.showHelp = true }.keyboardShortcut("?")
         }
+    }
+    private func canSearchRelated(_ field: RelatedSearch) -> Bool {
+        guard let match = reader?.selected else { return false }
+        return !match.artist.isEmpty && (field == .artist || !match.album.isEmpty)
+            && settings.providerAccess.searchable.contains(match.provider)
     }
     private func selectRelative(_ offset: Int) {
         guard let reader, !reader.matches.isEmpty else { return }

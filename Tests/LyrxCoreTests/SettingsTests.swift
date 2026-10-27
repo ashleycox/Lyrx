@@ -35,4 +35,22 @@ import Testing
         #expect(settings.lineWidth == 40)
         #expect(settings.textScale == 3)
     }
+
+    @Test func unconfiguredLrcRedCannotReplaceTheLastUsableProvider() throws {
+        let name = "LyrxTests.\(UUID())"
+        let defaults = try #require(UserDefaults(suiteName: name))
+        defer { defaults.removePersistentDomain(forName: name) }
+        let settings = AppSettings(defaults: defaults)
+        settings.setEnabled(true, provider: .lrcRed)
+        #expect(settings.enabledProviders.contains(.lrcRed))
+        #expect(settings.providerAccess.searchable == [.lrclib])
+        #expect(!settings.setEnabled(false, provider: .lrclib))
+        settings.lrcRedEmail = "reader@example.invalid"
+        #expect(settings.setEnabled(false, provider: .lrclib))
+        #expect(AppSettings(defaults: defaults).providerAccess.contactEmail == "reader@example.invalid")
+        settings.lrcRedEmail = ""
+        #expect(settings.enabledProviders == [.lrcRed])
+        #expect(settings.providerAccess.searchable.isEmpty)
+        #expect(!settings.setEnabled(false, provider: .lrcRed))
+    }
 }

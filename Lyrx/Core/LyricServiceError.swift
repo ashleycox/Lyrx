@@ -5,6 +5,7 @@ enum LyricServiceError: LocalizedError, Sendable, Equatable {
     case invalidResponse, tooLarge
     case unavailable(Int, retryAfterSeconds: Int? = nil)
     case noLyrics, invalidURL
+    case providerNotConfigured
 
     var errorDescription: String? {
         switch self {
@@ -24,6 +25,7 @@ enum LyricServiceError: LocalizedError, Sendable, Equatable {
             "The service returned an error (HTTP \(status)). Try again later or enable another provider."
         case .noLyrics: "This match has no available lyrics. Choose another match."
         case .invalidURL: "The search could not be sent. Try a different search."
+        case .providerNotConfigured: "Enable this provider and supply its required settings before using it."
         }
     }
 }

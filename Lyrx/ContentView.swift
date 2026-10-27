@@ -7,7 +7,6 @@ struct ContentView: View {
     @State private var showingSettings = false
     @FocusState private var focusedField: SearchField?
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-    @Environment(\.verticalSizeClass) private var verticalSizeClass
     enum SearchField: Hashable { case query, artist, title, album }
 
     init(model: ReaderModel? = nil) {
@@ -53,6 +52,9 @@ struct ContentView: View {
                     }
                 }
                 .sheet(isPresented: $model.showHelp) { ReadingHelpView() }
+                .sheet(isPresented: $model.showAdditionalInfo, onDismiss: model.cancelInfo) {
+                    AdditionalInfoView(model: model, settings: settings)
+                }
         }
         #if os(macOS)
             .frame(minWidth: 540, minHeight: 480)
@@ -65,27 +67,21 @@ struct ContentView: View {
         }
         .onChange(of: settings.formatting) { model.reformat(settings.formatting) }
         .onChange(of: settings.singleLine) { model.go(to: model.currentLine) }
-        .onChange(of: settings.enabledProviders) { model.providersChanged(settings.enabledProviders) }
-        .onDisappear { model.cancel() }
+        .onChange(of: settings.providerAccess) { model.providersChanged(settings.providerAccess.searchable) }
+        .onDisappear {
+            model.cancel()
+            model.cancelInfo()
+        }
     }
 
-    /// At large text sizes or in landscape, the whole page can scroll instead of crushing the reader.
+    /// Filters and related results can outgrow either platform's window. Keep the same hierarchy
+    /// while scrolling so large text stays reachable and accessibility focus is not recreated.
     @ViewBuilder private var adaptiveContent: some View {
-        #if os(iOS)
-            if dynamicTypeSize.isAccessibilitySize || verticalSizeClass == .compact {
-                ScrollView { mainContent }
-            } else {
-                mainContent
+        GeometryReader { geometry in
+            ScrollView {
+                mainContent.frame(minHeight: geometry.size.height, alignment: .top)
             }
-        #else
-            // Keep one hierarchy as filters, notices, and results expand. Switching between
-            // duplicate layouts destroys accessibility elements and can dislodge VoiceOver.
-            GeometryReader { geometry in
-                ScrollView {
-                    mainContent.frame(minHeight: geometry.size.height, alignment: .top)
-                }
-            }
-        #endif
+        }
     }
 
     private var mainContent: some View {
@@ -126,6 +122,15 @@ struct ContentView: View {
                     Button("Cancel", action: model.cancel).keyboardShortcut(".", modifiers: .command)
                 }
             }
+            if let scope = model.searchScope {
+                HStack {
+                    Text("Searching \(scope.name)").foregroundStyle(.secondary)
+                    Button("All Enabled Services") {
+                        model.searchScope = nil
+                        search()
+                    }.keyboardShortcut("s", modifiers: [.command, .shift])
+                }
+            }
             if model.showFilters {
                 VStack(alignment: .leading, spacing: 8) {
                     filterField("Artist", text: $model.request.artist, field: .artist, key: "1")
@@ -162,9 +167,18 @@ struct ContentView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(match.title).font(.title2).fixedSize(horizontal: false, vertical: true).accessibilityAddTraits(
                         .isHeader)
-                    Text(match.artist).font(.headline).fixedSize(horizontal: false, vertical: true)
-                    if !match.album.isEmpty { Text(match.album).font(.subheadline).foregroundStyle(.secondary) }
-                    Text("Lyrics from \(match.provider.name)").font(.caption).foregroundStyle(.secondary)
+                    RelatedSearchButton(field: .artist, match: match, model: model, settings: settings).font(.headline)
+                    if !match.album.isEmpty {
+                        RelatedSearchButton(field: .album, match: match, model: model, settings: settings).font(
+                            .subheadline)
+                    }
+                    Link("Lyrics from \(match.provider.name)", destination: match.sourceURL)
+                        .font(.caption).keyboardShortcut("s", modifiers: [.command, .option])
+                    Button("Additional Info", systemImage: "info.circle") {
+                        model.openInfo(for: match, settings: settings)
+                    }
+                    .disabled(model.isSearching).accessibilityIdentifier("additionalInfoButton")
+                    .help("Additional Info (Command–I)")
                 }
                 .fixedSize(horizontal: false, vertical: true)
             }

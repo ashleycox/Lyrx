@@ -22,13 +22,21 @@ Show Filters to narrow results by artist, title, or album. Selecting another mat
 
 On Mac, Other Matches is a native table with title, artist, album, and provider columns, always visible when results are available. Command–Option–M focuses the table. Arrow keys browse rows and update the lyrics without moving focus out of the table. Press Return, double-click a row, or choose Read Lyrics from its context menu to enter the reader. Command–L also returns to the loaded lyric. On iPhone and iPad, Other Matches remains collapsible, with individually accessible result buttons.
 
+**Additional Info** shows credits and other metadata returned by the source, such as duration, release date, language, identifiers, and source links. Open it with **Command–I** on Mac, the reader's info button, or a result's Additional Info action. lrc.red's full record loads when this view opens; other services show their search metadata. Missing information is left absent, and no artwork or audio is downloaded automatically.
+
+Artist and album names open another search on that match's provider. The artist/album filters are shown, Mac results retain table focus, and iOS expands Other Matches. These links do not change your saved service switches. **Command–Shift–A/B** searches the loaded match's artist/album on Mac. **All Enabled Services** (**Command–Shift–S**) repeats the filtered search across your configured providers. Provider result limits apply; these searches are not complete discographies or album track lists.
+
 ## Services and privacy
 
-[LRCLIB](https://lrclib.net/docs) is enabled by default. [lyrics.ovh](https://github.com/NTag/lyrics.ovh) is optional. Both public APIs work without an embedded API key. Settings always keeps at least one service enabled. Service errors are shown separately, so a failed provider does not discard successful results from another.
+[LRCLIB](https://lrclib.net/docs) is enabled by default. [lyrics.ovh](https://github.com/NTag/lyrics.ovh) and [lrc.red](https://lrc.red/api) are optional. None requires an API key. Settings always keeps at least one service enabled. Service errors are shown separately, so a failed provider does not discard successful results from another.
+
+Enable **lrc.red** in Settings to reveal its **Contact email** field. A valid contact address is required by that service and sent in its identifying User-Agent with each request. A blank or invalid address excludes lrc.red from searches, lyric downloads, and metadata requests even while its switch is on. Clearing the address does not enable another provider automatically. The last usable alternative cannot be disabled in favor of an unconfigured lrc.red; if you later clear the email with only lrc.red enabled, configure it or enable another service before searching. On Mac, **Command–Shift–R** toggles lrc.red in Settings and **Command–Shift–E** focuses its email field.
+
+The address stays in local preferences and is sent only to lrc.red. Requests carrying it cannot redirect to another origin. It is never placed in a URL, displayed as attribution, or sent to the other providers. Linked credits identify the provider beside its results, lyrics, and additional information.
 
 LRCLIB can return HTTP 503 when overloaded. Lyrx retries a read once when a 429 or 503 response asks for a wait of at most two seconds. Longer waits and persistent failures are reported without repeated requests. Keeping lyrics.ovh enabled provides another lookup option; a retry cannot resolve a sustained service outage.
 
-Searches happen only on submission. Enabled providers receive search terms and the network IP address. lyrics.ovh obtains suggestions from Deezer and may query other lyric services, including LRCLIB, internally; its switch controls Lyrx's direct use of that service. The app uses ephemeral networking, stores only preferences, and includes no analytics, search history, on-disk lyric cache, account, or cloud sync. See [provider research](Documentation/Providers.md).
+Requests happen on search submission, result selection, artist/album navigation, or opening Additional Info. Configured, enabled providers receive search terms or recording identifiers and the network IP address; lrc.red also receives the configured email. lyrics.ovh obtains suggestions from Deezer and may query other lyric services, including LRCLIB, internally; its switch controls Lyrx's direct use of that service. The app uses ephemeral networking, stores only preferences, and includes no analytics, local search history, on-disk lyric cache, account, or cloud sync. Provider-side retention is governed by each service. See [provider research](Documentation/Providers.md).
 
 Lyrics remain the property of their rights holders. The app's GPL license applies to its code, not lyric content. Public API access does not grant redistribution rights to lyrics. Provider availability, accuracy, licensing, and service terms can change.
 
@@ -42,7 +50,7 @@ Use **Xcode 26.6 or later**, with the macOS/iOS SDKs installed. CI explicitly se
 
 Personal signing details are deliberately absent. For physical devices or distribution, copy `Configuration/Local.xcconfig.example` to `Configuration/Local.xcconfig`, then enter your team ID and your own unique bundle identifier there. This local file is ignored by Git. Avoid saving your team directly in the project editor; Xcode can otherwise write it into the shared project.
 
-The public bundle identifier is `org.lyrx.app`. The Mac target uses App Sandbox with outgoing network access; Xcode generates the corresponding entitlements from build settings. No push notifications, iCloud, file access, or unrelated capabilities are required. The privacy manifest declares local preference use of UserDefaults.
+The public bundle identifier is `org.lyrx.app`. The Mac target uses App Sandbox with outgoing network access; Xcode generates the corresponding entitlements from build settings. No push notifications, iCloud, file access, or unrelated capabilities are required. The privacy manifest declares local preference use of UserDefaults and the contact email and searches sent for app functionality. It declares no tracking.
 
 For an unsigned build without an account:
 
@@ -79,7 +87,7 @@ Scripts/test-ui.sh macOS focus
 Scripts/test-ui.sh iOS large-text
 ```
 
-Available scopes are `smoke` (either platform), `focus` (Mac table navigation), `reader-focus` (Mac search and Command–L), `settings` and `large-text` (iOS), and `all` (the selected platform). Use `Scripts/test-ui.sh iOS all` for the full iPhone suite. Broader coverage belongs before releases or when a shared interface change warrants it, rather than after every edit.
+Available scopes are `smoke` (either platform), `focus` (Mac table navigation), `reader-focus` (Mac search and Command–L), `details` (Additional Info and album navigation on either platform), `settings` and `large-text` (iOS), and `all` (the selected platform). Use `Scripts/test-ui.sh iOS all` for the full iPhone suite. Broader coverage belongs before releases or when a shared interface change warrants it, rather than after every edit.
 
 The runner reuses `Scripts/verify.sh` build directories, prefers an already booted compatible iPhone simulator, and disables parallel simulator clones. `LYRX_BUILD_ROOT` changes the shared build root; `LYRX_UI_BUILD_ROOT` overrides just the UI output directory. `LYRX_UI_DESTINATION` selects a specific destination on the requested platform, including an iPad simulator. Tests have a 60-second timeout because [XCTest rounds allowances up to whole minutes](https://developer.apple.com/documentation/xctest/xctestcase/executiontimeallowance); build and boot time are separate. The warm smoke-test target is under 15 seconds of test execution, with other focused tests under 30 seconds.
 

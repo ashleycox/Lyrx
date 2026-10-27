@@ -10,7 +10,7 @@ on:
       scope:
         description: Check (focus and reader-focus are Mac-only; settings and large-text are iOS-only)
         type: choice
-        options: [smoke, focus, reader-focus, settings, large-text, all]
+        options: [smoke, focus, reader-focus, details, settings, large-text, all]
         default: smoke
 permissions:
   contents: read

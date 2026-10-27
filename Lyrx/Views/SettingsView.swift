@@ -4,6 +4,7 @@ import SwiftUI
 struct SettingsView: View {
     @Environment(AppSettings.self) private var settings
     @FocusState private var widthFocused: Bool
+    @FocusState private var emailFocused: Bool
     var body: some View {
         @Bindable var settings = settings
         Form {
@@ -19,20 +20,42 @@ struct SettingsView: View {
                             Text(provider.summary).font(.caption).foregroundStyle(.secondary)
                         }
                     }
-                    .disabled(settings.enabledProviders == [provider])
+                    .disabled(settings.enabledProviders.contains(provider) && !settings.canDisable(provider))
                     .accessibilityLabel(provider.name)
-                    .keyboardShortcut(provider == .lrclib ? "1" : "2", modifiers: [.command, .shift])
+                    .keyboardShortcut(
+                        provider == .lrcRed ? "r" : KeyEquivalent(provider.shortcut), modifiers: [.command, .shift]
+                    )
                     .accessibilityHint(
                         provider.summary
-                            + (settings.enabledProviders == [provider]
-                                ? " Enable another service before turning this one off."
+                            + (settings.enabledProviders.contains(provider) && !settings.canDisable(provider)
+                                ? " Configure and enable another service before turning this one off."
                                 : " Changes which service receives future searches."))
+                    if provider == .lrcRed, settings.enabledProviders.contains(.lrcRed) {
+                        HStack {
+                            Button("Contact email") { emailFocused = true }
+                                .buttonStyle(.plain).keyboardShortcut("e", modifiers: [.command, .shift])
+                            TextField("Contact email for lrc.red", text: $settings.lrcRedEmail)
+                                .focused($emailFocused).autocorrectionDisabled()
+                                .accessibilityIdentifier("lrcRedEmail")
+                                #if os(iOS)
+                                    .keyboardType(.emailAddress).textInputAutocapitalization(.never)
+                                #endif
+                        }
+                        Text(
+                            "Stored on this device and sent to lrc.red with each request to identify this app's use. It is not sent to the other providers."
+                        )
+                        .font(.caption).foregroundStyle(.secondary)
+                        if settings.providerAccess.contactEmail == nil {
+                            Text("lrc.red is skipped until you enter a valid contact email.")
+                                .font(.caption).accessibilityIdentifier("lrcRedUnavailable")
+                        }
+                    }
                 }
             } header: {
                 Text("Lyric Services")
             } footer: {
                 Text(
-                    "At least one service must stay enabled. Searches are sent only when you press Search. lyrics.ovh may use other services internally."
+                    "At least one service must stay enabled. Lyric searches and metadata requests contact only configured services you have enabled. lyrics.ovh may use other services internally."
                 )
             }
             Section {
@@ -111,6 +134,8 @@ struct SettingsView: View {
                     "1", modifiers: [.command, .control])
                 Link("lyrics.ovh API documentation", destination: URL(string: "https://github.com/NTag/lyrics.ovh")!)
                     .keyboardShortcut("2", modifiers: [.command, .control])
+                Link("lrc.red API documentation", destination: URL(string: "https://lrc.red/api")!)
+                    .keyboardShortcut("3", modifiers: [.command, .control])
             }
         }.formStyle(.grouped).navigationTitle("Settings")
     }

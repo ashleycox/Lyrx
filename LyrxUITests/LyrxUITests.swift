@@ -57,6 +57,42 @@ final class LyrxUITests: XCTestCase {
         #endif
     }
 
+    /// One recording is enough to verify the sheet, credits, and provider-scoped navigation.
+    @MainActor func testAdditionalInfoAndRelatedSearch() {
+        let app = launch()
+        search(app)
+        XCTAssertTrue(app.textViews["lyricReader"].waitForExistence(timeout: 5))
+        #if os(macOS)
+            app.typeKey("i", modifierFlags: .command)
+        #else
+            app.buttons["additionalInfoButton"].tap()
+        #endif
+        XCTAssertTrue(app.staticTexts["Example Writer"].waitForExistence(timeout: 3))
+        #if os(macOS)
+            app.typeKey(.escape, modifierFlags: [])
+            app.buttons["albumSearch"].firstMatch.click()
+        #else
+            app.buttons["Done"].tap()
+            app.buttons["albumSearch"].firstMatch.tap()
+        #endif
+        XCTAssertTrue(app.buttons["All Enabled Services"].waitForExistence(timeout: 3))
+        #if os(macOS)
+            XCTAssertTrue(app.tables["matchesTable"].exists)
+        #else
+            XCTAssertEqual(app.buttons["matchesDisclosure"].value as? String, "Expanded")
+        #endif
+        XCTAssertTrue((app.textViews["lyricReader"].value as? String)?.contains("Morning light") == true)
+        #if os(macOS)
+            // Check the conditional contact field through its real Settings shortcuts.
+            app.typeKey(",", modifierFlags: .command)
+            app.typeKey("r", modifierFlags: [.command, .shift])
+            XCTAssertTrue(app.textFields["lrcRedEmail"].waitForExistence(timeout: 3))
+            XCTAssertTrue(app.staticTexts["lrcRedUnavailable"].exists)
+            app.typeKey("r", modifierFlags: [.command, .shift])
+            XCTAssertTrue(app.textFields["lrcRedEmail"].waitForNonExistence(timeout: 3))
+        #endif
+    }
+
     #if os(iOS)
         @MainActor func testProviderProtectionAndPlatformCopy() {
             let app = launch()

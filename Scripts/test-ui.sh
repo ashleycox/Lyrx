@@ -4,7 +4,7 @@ set -eu
 cd "$(dirname "$0")/.."
 
 usage() {
-    echo "Usage: Scripts/test-ui.sh [macOS|iOS] [smoke|focus|reader-focus|settings|large-text|all]"
+    echo "Usage: Scripts/test-ui.sh [macOS|iOS] [smoke|focus|reader-focus|details|settings|large-text|all]"
     echo "Defaults: macOS smoke. focus and reader-focus are Mac-only; settings and large-text are iOS-only."
 }
 if [ "${1:-}" = "--help" ]; then usage; exit 0; fi
@@ -20,6 +20,7 @@ case "$ui_scope" in
     smoke) ui_test=testSearchAndLineNavigation ;;
     focus) ui_test=testBrowsingTableKeepsKeyboardFocus ;;
     reader-focus) ui_test=testSearchAndFocusLyricsShortcut ;;
+    details) ui_test=testAdditionalInfoAndRelatedSearch ;;
     settings) ui_test=testProviderProtectionAndPlatformCopy ;;
     large-text) ui_test=testLargestTextKeepsReadingControlsReachable ;;
     all) ui_test= ;;

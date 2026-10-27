@@ -45,6 +45,10 @@
             let item = NSMenuItem(title: "Read Lyrics", action: #selector(Coordinator.readFromMenu), keyEquivalent: "")
             item.target = context.coordinator
             menu.addItem(item)
+            let info = NSMenuItem(
+                title: "Additional Info", action: #selector(Coordinator.infoFromMenu), keyEquivalent: "")
+            info.target = context.coordinator
+            menu.addItem(info)
             menu.delegate = context.coordinator
             table.menu = menu
             context.coordinator.table = table
@@ -125,6 +129,27 @@
                 case "Album": value = match.album
                 default: value = match.provider.name
                 }
+                if column.identifier.rawValue == "Artist" || column.identifier.rawValue == "Album" {
+                    let cell =
+                        tableView.makeView(withIdentifier: column.identifier, owner: self) as? MatchSearchCellView
+                        ?? MatchSearchCellView()
+                    cell.identifier = column.identifier
+                    cell.button.title = value
+                    cell.button.tag = row
+                    cell.button.target = self
+                    cell.button.action =
+                        column.identifier.rawValue == "Artist"
+                        ? #selector(searchArtist(_:)) : #selector(searchAlbum(_:))
+                    cell.button.isEnabled =
+                        !value.isEmpty && !match.artist.isEmpty
+                        && settings.providerAccess.searchable.contains(match.provider)
+                    cell.button.setAccessibilityIdentifier("match-\(match.id)-\(column.identifier.rawValue)")
+                    cell.button.setAccessibilityLabel(value)
+                    cell.button.setAccessibilityHelp(
+                        "Search \(match.provider.name) for this \(column.identifier.rawValue.lowercased()).")
+                    cell.toolTip = value
+                    return cell
+                }
                 let cell: NSTableCellView
                 if let reused = tableView.makeView(withIdentifier: column.identifier, owner: self) as? NSTableCellView {
                     cell = reused
@@ -166,9 +191,21 @@
                 readSelected()
             }
 
+            @objc func infoFromMenu() {
+                guard let table, matches.indices.contains(table.selectedRow) else { return }
+                model.openInfo(for: matches[table.selectedRow], settings: settings)
+            }
+
+            @objc func searchArtist(_ sender: NSButton) { searchRelated(.artist, row: sender.tag) }
+            @objc func searchAlbum(_ sender: NSButton) { searchRelated(.album, row: sender.tag) }
+            private func searchRelated(_ field: RelatedSearch, row: Int) {
+                guard matches.indices.contains(row) else { return }
+                model.searchRelated(field, match: matches[row], settings: settings)
+            }
+
             func menuNeedsUpdate(_ menu: NSMenu) {
                 guard let table else { return }
-                menu.items.first?.isEnabled = matches.indices.contains(table.selectedRow)
+                for item in menu.items { item.isEnabled = matches.indices.contains(table.selectedRow) }
             }
 
             private func read(row: Int) {

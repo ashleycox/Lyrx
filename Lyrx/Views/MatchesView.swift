@@ -28,32 +28,47 @@ struct MatchesView: View {
                     ScrollView {
                         LazyVStack(alignment: .leading, spacing: 0) {
                             ForEach(model.matches) { match in
-                                Button {
-                                    model.select(match, settings: settings)
-                                } label: {
-                                    HStack(alignment: .top, spacing: 8) {
-                                        if model.selected?.id == match.id {
-                                            Image(systemName: "checkmark").accessibilityLabel("Selected")
-                                        }
-                                        VStack(alignment: .leading, spacing: 4) {
-                                            Text(match.title).font(.headline)
-                                            Text(
-                                                [match.artist, match.album, match.provider.name].filter { !$0.isEmpty }
-                                                    .joined(separator: " · ")
-                                            )
-                                            .font(.subheadline).foregroundStyle(.secondary)
-                                        }
-                                        Spacer(minLength: 0)
-                                    }.frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 8)
-                                        .contentShape(
-                                            .rect)
-                                }.buttonStyle(.plain)
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Button {
+                                        model.select(match, settings: settings)
+                                    } label: {
+                                        Text(match.title).font(.headline).frame(
+                                            maxWidth: .infinity, alignment: .leading)
+                                    }.buttonStyle(.plain)
+                                        .accessibilityValue(model.selected?.id == match.id ? "Selected" : "")
+                                    RelatedSearchButton(field: .artist, match: match, model: model, settings: settings)
+                                    if !match.album.isEmpty {
+                                        RelatedSearchButton(
+                                            field: .album, match: match, model: model, settings: settings)
+                                    }
+                                    Text(match.provider.name).font(.caption).foregroundStyle(.secondary)
+                                    Button("Additional Info") { model.openInfo(for: match, settings: settings) }
+                                        .font(.caption)
+                                }.padding(.vertical, 8).accessibilityElement(children: .contain)
                                 Divider()
                             }
                         }
                     }.frame(maxHeight: 180).accessibilityLabel("Other matches")
                 }
             #endif
+            // Linked credits remain alongside the table/list, including lrc.red search data.
+            if showsCredits {
+                ForEach(
+                    LyricProviderID.allCases.filter { provider in model.matches.contains { $0.provider == provider } }
+                ) { provider in
+                    Link("Results from \(provider.name)", destination: provider.website)
+                        .font(.caption)
+                        .keyboardShortcut(KeyEquivalent(provider.shortcut), modifiers: [.command, .control, .option])
+                }
+            }
         }
+    }
+
+    private var showsCredits: Bool {
+        #if os(macOS)
+            true
+        #else
+            model.showMatches
+        #endif
     }
 }
