@@ -28,7 +28,7 @@ Lyrics remain the property of their rights holders. The app's GPL license applie
 
 ## Build and run
 
-Use **Xcode 27.1 or later**, with Swift 6.2 or later and the macOS/iOS SDKs installed. Deployment targets are **macOS 26** and **iOS/iPadOS 26**. The app is SwiftUI with AppKit and UIKit text controls, and has no third-party runtime dependencies.
+Use **Xcode 26.6 or later**, with the macOS/iOS SDKs installed. CI explicitly selects Xcode 26.6; development with newer Xcode versions is supported. Keep the project in its existing compatible file format (object version 77), even when saving it with newer Xcode. Swift 6 language mode and complete concurrency checking remain enabled. Deployment targets are **macOS 26** and **iOS/iPadOS 26**. The app is SwiftUI with AppKit and UIKit text controls, and has no third-party runtime dependencies.
 
 1. Open `Lyrx.xcodeproj`.
 2. Select the shared **Lyrx** scheme.

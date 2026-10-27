@@ -25,6 +25,10 @@ for name in filter(None, paths):
         problems.append(f"Personal signing team: {name}")
     if re.search(r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----", contents):
         problems.append(f"Private key: {name}")
+    if path.suffix == ".pbxproj":
+        version = re.search(r"\bobjectVersion\s*=\s*(\d+);", contents)
+        if version is None or version.group(1) != "77":
+            problems.append(f"Keep project object version 77 for the Xcode 26.6 CI toolchain: {name}")
     identifiers = re.findall(r"PRODUCT_BUNDLE_IDENTIFIER\s*=\s*([^;]+);", contents)
     if path.suffix == ".pbxproj" and any(value.strip().strip('"') not in {"$(LYRX_BUNDLE_IDENTIFIER)", "org.lyrx.app.UITests"} for value in identifiers):
         problems.append(f"Bundle identifier must use local configuration: {name}")

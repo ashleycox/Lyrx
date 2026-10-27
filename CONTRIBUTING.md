@@ -4,7 +4,7 @@ Lyrx's priority is reliable lyric reading with VoiceOver and a single-line brail
 
 ## Development
 
-Use Xcode 27.1 or later and Swift 6 strict concurrency. Open `Lyrx.xcodeproj`, select the shared Lyrx scheme, and choose a Mac or iOS simulator. See the README for command-line builds and local signing. Use descriptive topic branches for contributions and keep changes focused.
+Use Xcode 26.6 or later and Swift 6 strict concurrency. Keep the project file at object version 77 so the CI toolchain can open it; newer Xcode versions must not automatically upgrade that format. Open `Lyrx.xcodeproj`, select the shared Lyrx scheme, and choose a Mac or iOS simulator. See the README for command-line builds and local signing. Use descriptive topic branches for contributions and keep changes focused.
 
 - Put provider adapters, formatting, ranking, and state logic in `Lyrx/Core`; native text bridges belong in `Lyrx/Reader`, and interface components in `Lyrx/Views`.
 - Keep UI state on the main actor. Pass Sendable values between tasks. Cancel superseded work and check request identity after suspension. Do not silence isolation errors with unchecked conformances.

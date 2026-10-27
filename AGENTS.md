@@ -26,6 +26,7 @@ Lyrx is a native macOS, iPhone, and iPad lyric finder designed first for people 
 ## Project and signing
 
 - Maintain a shared Xcode scheme for macOS and iOS and deterministic tests. Keep deployment targets and toolchain requirements documented.
+- CI uses Xcode 26.6. Preserve project object version 77 when working in newer Xcode; do not upgrade the file format without updating and verifying the supported CI toolchain.
 - Commit no development team, personal bundle identifier, provisioning profile, certificate, signing key, device identifier, or user-specific Xcode state. Use ignored local configuration for personal signing; check the staged diff before committing.
 - Keep sandbox permissions minimal: outgoing network access on macOS, no unrelated file, microphone, location, or cloud capabilities. Do not weaken App Transport Security.
 - Keep dependencies to Apple frameworks unless a justified addition is agreed. Include required privacy declarations and maintain build instructions and contribution guidance.
