@@ -1,5 +1,5 @@
 #!/bin/sh
-# Use an installed iOS simulator without committing a developer's device identifiers.
+# Use a requested platform or an installed iPhone simulator without committing device identifiers.
 set -eu
 cd "$(dirname "$0")/.."
 ui_destination="${LYRX_UI_DESTINATION:-}"

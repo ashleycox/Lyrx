@@ -6,13 +6,15 @@ Lyrx uses a read-only, selectable NSTextView on macOS and UITextView on iOS. The
 
 Core tests verify hard widths (including spaces and punctuation), intact words and Unicode graphemes, UTF-16 selection offsets, stanza preservation, punctuation boundaries, unlimited lines, oversized-word recovery, ranking, provider isolation, cancellation, and stale-response protection.
 
+Focus requests are consumed once. Tests verify that browsing a match can update the lyric without requesting reader focus, and that an old focus request cannot be replayed after a text view is recreated. The Mac interface test navigates multiple table rows with application-level arrow-key events, including scrolling and an instrumental result that temporarily removes the text view, to detect focus escaping into the lyric reader.
+
 ## Runtime checks performed
 
 During development on 27 October 2026:
 
 - macOS and iOS Simulator builds passed in Swift 6 mode with complete concurrency checking.
 - The Mac app was built with ad-hoc signing. Its resulting entitlements contained App Sandbox and outgoing network access, without cloud or push capabilities.
-- A live Mac search returned provider results. Changing a match moved keyboard focus to the native lyric text control, confirmed through the accessibility tree.
+- A live Mac search returned provider results and moved keyboard focus to the native lyric text control, confirmed through the accessibility tree. Mac table browsing now preserves results focus; explicitly reading a match moves focus into its lyrics.
 - Next Line advanced the current position. One-line mode exposed only the selected line, with an accessible line-number label. Returning to full text kept the position.
 - The Mac Settings accessibility tree exposed the last enabled provider as disabled, with an explanation. Provider labels were made explicit after inspection.
 - iPhone and iPad Simulator UI tests passed for search-to-reader behavior, line navigation, provider-toggle protection, and the largest Dynamic Type setting. Visual inspection caught a compressed reader at large text sizes; the layout now scrolls and tests assert a usable reader height.
@@ -31,6 +33,7 @@ Record OS versions, display model and firmware, connection type, braille table, 
 6. Test iPhone portrait and landscape, small screens, iPad split view, all Dynamic Type sizes, 300% lyric text, Zoom, dark mode, Increase Contrast, Bold Text, and Reduce Motion. Controls and error messages must remain reachable without clipping.
 7. Disable each provider in turn; the final enabled service must stay on. Search offline, cancel, repeat rapidly, switch matches mid-load, and change providers mid-search. Confirm errors are available to VoiceOver and that stale responses never replace newer content.
 8. Confirm platform-specific help: Mac screens describe menus and VoiceOver Utility; iOS screens describe touch and system Settings. Do not show instructions for another platform.
+9. On Mac, expand Other Matches and interact with the table using VoiceOver. Browse every row, scroll, resize the window, and expand filters. Focus must stay in the table while lyrics update. Return or Read Lyrics must focus the reader once. Test selections with missing lyrics, instrumentals, delayed responses, and formatting errors as well as successful results.
 
 ## References
 

@@ -15,6 +15,8 @@ final class ReaderModel {
     private(set) var notices: [ProviderNotice] = []
     private(set) var formattingError: String?
     private(set) var readerFocusID = UUID()
+    private(set) var pendingReaderFocusID: UUID?
+    private(set) var pendingMatchesFocusID: UUID?
     private(set) var selectionID = UUID()
     var searchFocusID = UUID()
     var showFilters = false
@@ -23,6 +25,7 @@ final class ReaderModel {
     private let service: any LyricSearching
     private var operation: Task<Void, Never>?
     private var generation = UUID()
+    private var shouldFocusSearchResult = true
 
     init(service: any LyricSearching = ProviderClient()) { self.service = service }
 
@@ -37,6 +40,7 @@ final class ReaderModel {
     func search(settings: AppSettings) {
         guard canSearch else { return }
         cancel()
+        shouldFocusSearchResult = true
         let token = generation
         let snapshot = request.cleaned
         let providers = settings.enabledProviders
@@ -73,7 +77,9 @@ final class ReaderModel {
                     do {
                         let lyrics = try await service.lyrics(for: match)
                         guard self.isCurrent(token) else { return }
-                        self.install(match, lyrics: lyrics, options: settings.formatting)
+                        self.install(
+                            match, lyrics: lyrics, options: settings.formatting,
+                            focusOnLoad: self.shouldFocusSearchResult)
                         self.isSearching = false
                         return
                     } catch {
@@ -92,7 +98,8 @@ final class ReaderModel {
         }
     }
 
-    func select(_ match: LyricMatch, settings: AppSettings) {
+    /// Table selection can update the lyric without interrupting keyboard or VoiceOver browsing.
+    func select(_ match: LyricMatch, settings: AppSettings, focusOnLoad: Bool = true) {
         guard settings.enabledProviders.contains(match.provider) else { return }
         cancel()
         let token = generation
@@ -102,7 +109,7 @@ final class ReaderModel {
             do {
                 let lyrics = try await service.lyrics(for: match)
                 guard let self, self.isCurrent(token) else { return }
-                self.install(match, lyrics: lyrics, options: settings.formatting)
+                self.install(match, lyrics: lyrics, options: settings.formatting, focusOnLoad: focusOnLoad)
                 self.isSearching = false
             } catch {
                 guard let self, self.isCurrent(token) else { return }
@@ -116,6 +123,8 @@ final class ReaderModel {
         operation?.cancel()
         operation = nil
         generation = UUID()
+        pendingReaderFocusID = nil
+        pendingMatchesFocusID = nil
         if isSearching { status = "Search cancelled." }
         isSearching = false
     }
@@ -154,11 +163,48 @@ final class ReaderModel {
         currentLine = document.line(atUTF16Offset: offset)
     }
 
-    func focusReader() { if hasLyrics { readerFocusID = UUID() } }
+    func focusReader() {
+        guard hasLyrics else { return }
+        pendingMatchesFocusID = nil
+        readerFocusID = UUID()
+        pendingReaderFocusID = readerFocusID
+    }
+
+    /// A request is consumed once, so recreating a native text view cannot replay old focus changes.
+    func consumeReaderFocus(_ requestID: UUID) -> Bool {
+        guard pendingReaderFocusID == requestID else { return false }
+        pendingReaderFocusID = nil
+        return true
+    }
+
+    /// The menu shortcut enters results directly; clicking the disclosure keeps focus on its button.
+    func toggleMatches(focusResults: Bool = false) {
+        guard !matches.isEmpty else { return }
+        showMatches.toggle()
+        // A slow lyric request must not interrupt someone who has started exploring results.
+        if showMatches { shouldFocusSearchResult = false }
+        pendingMatchesFocusID = nil
+        if focusResults {
+            if showMatches {
+                pendingReaderFocusID = nil
+                pendingMatchesFocusID = UUID()
+            } else {
+                focusReader()
+            }
+        }
+    }
+
+    func consumeMatchesFocus(_ requestID: UUID) -> Bool {
+        guard pendingMatchesFocusID == requestID else { return false }
+        pendingMatchesFocusID = nil
+        return true
+    }
 
     private func isCurrent(_ token: UUID) -> Bool { generation == token && !Task.isCancelled }
 
-    private func install(_ match: LyricMatch, lyrics: String, options: FormattingOptions) {
+    private func install(
+        _ match: LyricMatch, lyrics: String, options: FormattingOptions, focusOnLoad: Bool = true
+    ) {
         selected = match
         rawLyrics = lyrics
         currentLine = 0
@@ -170,6 +216,6 @@ final class ReaderModel {
             ? "This recording is marked instrumental; there are no lyric lines."
             : "Loaded \(match.title) by \(match.artist)."
         selectionID = UUID()
-        focusReader()
+        if focusOnLoad { focusReader() }
     }
 }

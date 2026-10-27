@@ -60,6 +60,9 @@ struct ContentView: View {
         .focusedSceneValue(\.lyrxReader, model)
         .onChange(of: model.searchFocusID) { focusedField = .query }
         .onChange(of: model.readerFocusID) { focusedField = nil }
+        .onChange(of: model.pendingMatchesFocusID) {
+            if model.pendingMatchesFocusID != nil { focusedField = nil }
+        }
         .onChange(of: settings.formatting) { model.reformat(settings.formatting) }
         .onChange(of: settings.singleLine) { model.go(to: model.currentLine) }
         .onChange(of: settings.enabledProviders) { model.providersChanged(settings.enabledProviders) }
@@ -75,9 +78,12 @@ struct ContentView: View {
                 mainContent
             }
         #else
-            ViewThatFits(in: .vertical) {
-                mainContent
-                ScrollView { mainContent }
+            // Keep one hierarchy as filters, notices, and results expand. Switching between
+            // duplicate layouts destroys accessibility elements and can dislodge VoiceOver.
+            GeometryReader { geometry in
+                ScrollView {
+                    mainContent.frame(minHeight: geometry.size.height, alignment: .top)
+                }
             }
         #endif
     }

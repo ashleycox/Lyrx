@@ -2,6 +2,11 @@ import XCTest
 
 /// End-to-end checks use original fixture text and isolated preferences, without network access.
 final class LyrxUITests: XCTestCase {
+    override func setUp() {
+        super.setUp()
+        continueAfterFailure = false
+    }
+
     @MainActor private func launch(largeText: Bool = false) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = ["--ui-testing"]
@@ -25,9 +30,15 @@ final class LyrxUITests: XCTestCase {
         let reader = app.textViews["lyricReader"]
         XCTAssertTrue(reader.waitForExistence(timeout: 5))
         XCTAssertTrue((reader.value as? String)?.contains("Morning light across the room") == true)
-        app.buttons["Next Line"].tap()
+        #if os(macOS)
+            app.buttons["Next Line"].click()
+        #else
+            app.buttons["Next Line"].tap()
+        #endif
         XCTAssertTrue(
-            app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "Line 2 of")).firstMatch.exists)
+            app.staticTexts.containing(
+                NSPredicate(format: "label CONTAINS %@ OR value CONTAINS %@", "Line 2 of", "Line 2 of")
+            ).firstMatch.exists)
         let attachment = XCTAttachment(screenshot: app.screenshot())
         attachment.name = "Reader"
         attachment.lifetime = .keepAlways
@@ -58,6 +69,40 @@ final class LyrxUITests: XCTestCase {
             XCTAssertTrue(app.buttons["Next Line"].isHittable)
             let attachment = XCTAttachment(screenshot: app.screenshot())
             attachment.name = "Largest Dynamic Type"
+            attachment.lifetime = .keepAlways
+            add(attachment)
+        }
+    #endif
+
+    #if os(macOS)
+        @MainActor func testBrowsingTableKeepsKeyboardFocus() {
+            let app = launch()
+            search(app)
+            let reader = app.textViews["lyricReader"]
+            XCTAssertTrue(reader.waitForExistence(timeout: 5))
+            app.typeKey("m", modifierFlags: [.command, .option])
+            let table = app.tables["matchesTable"]
+            XCTAssertTrue(table.waitForExistence(timeout: 5))
+            XCTAssertTrue((reader.value as? String)?.contains("Morning light across the room") == true)
+            // Use application-level key events: targeting the table would conceal a focus jump.
+            for index in 1...12 {
+                app.typeKey(.downArrow, modifierFlags: [])
+                let loaded = NSPredicate(format: "value CONTAINS %@", "Example \(index) begins")
+                expectation(for: loaded, evaluatedWith: reader)
+                waitForExpectations(timeout: 5)
+            }
+            app.typeKey(.downArrow, modifierFlags: [])
+            expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: reader)
+            waitForExpectations(timeout: 5)
+            app.typeKey(.downArrow, modifierFlags: [])
+            expectation(for: NSPredicate(format: "value CONTAINS %@", "A final page"), evaluatedWith: reader)
+            waitForExpectations(timeout: 5)
+            app.typeKey(.return, modifierFlags: [])
+            app.typeKey(.downArrow, modifierFlags: [])
+            XCTAssertTrue(
+                app.staticTexts.containing(NSPredicate(format: "value == %@", "Line 2 of 2")).firstMatch.exists)
+            let attachment = XCTAttachment(screenshot: app.screenshot())
+            attachment.name = "Mac results table"
             attachment.lifetime = .keepAlways
             add(attachment)
         }

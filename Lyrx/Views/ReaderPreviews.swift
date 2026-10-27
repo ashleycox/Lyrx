@@ -4,14 +4,26 @@
     /// Original fixture text lets previews exercise a loaded reader without network access.
     struct ExampleLyricService: LyricSearching {
         func search(_ request: SearchRequest, enabled: Set<LyricProviderID>) async throws -> SearchResponse {
-            SearchResponse(matches: [
-                .init(
-                    provider: .lrclib, providerID: "preview", title: "A Quiet Morning", artist: "Example Artist",
-                    album: "Reading Preview",
-                    lyrics:
-                        "Morning light across the room\nA page is waiting to be read\n\nEach word has room to find its place\nA quiet line, a little space."
-                )
-            ])
+            let first = LyricMatch(
+                provider: .lrclib, providerID: "preview", title: "A Quiet Morning", artist: "Example Artist",
+                album: "Reading Preview",
+                lyrics:
+                    "Morning light across the room\nA page is waiting to be read\n\nEach word has room to find its place\nA quiet line, a little space."
+            )
+            let alternatives = (1...12).map { index in
+                LyricMatch(
+                    provider: .lrclib, providerID: "example-\(index)", title: "Reading Example \(index)",
+                    artist: "Example Artist", album: "Reading Preview",
+                    lyrics: "Example \(index) begins on this line\nAnother page is ready to read")
+            }
+            // Exercise disappearing and recreated lyric readers while table browsing continues.
+            let instrumental = LyricMatch(
+                provider: .lrclib, providerID: "instrumental", title: "Instrumental Example",
+                artist: "Example Artist", instrumental: true)
+            let final = LyricMatch(
+                provider: .lrclib, providerID: "final", title: "Final Example", artist: "Example Artist",
+                lyrics: "A final page is waiting\nAnother line is ready")
+            return SearchResponse(matches: [first] + alternatives + [instrumental, final])
         }
         func lyrics(for match: LyricMatch) async throws -> String { match.lyrics ?? "" }
     }

@@ -18,6 +18,8 @@ Text width counts Unicode extended grapheme clusters, not translated braille cel
 
 Show Filters to narrow results by artist, title, or album. Other Matches is collapsible; selecting a result replaces the current lyric. Songwriter filtering is not offered because these APIs do not reliably supply songwriter metadata. Automatic loading tries at most five vocal candidates; all returned matches remain available for manual selection. Instrumentals can be selected explicitly.
 
+On Mac, Other Matches is a native table with title, artist, album, and provider columns. Command–Option–M opens and focuses the table, or closes it and returns to the reader. Arrow keys browse rows and update the lyrics without moving focus out of the table. Press Return, double-click a row, or choose Read Lyrics from its context menu to enter the reader. Command–L also returns to the loaded lyric. On iPhone and iPad, results remain individually accessible buttons.
+
 ## Services and privacy
 
 [LRCLIB](https://lrclib.net/docs) is enabled by default. [lyrics.ovh](https://github.com/NTag/lyrics.ovh) is optional. Both public APIs work without an embedded API key. Settings always keeps at least one service enabled. Service errors are shown separately, so a failed provider does not discard successful results from another.
@@ -71,7 +73,7 @@ xcodebuild -project Lyrx.xcodeproj -scheme Lyrx \
   -derivedDataPath /tmp/lyrx-ui-tests CODE_SIGNING_ALLOWED=NO test
 ```
 
-Replace the simulator name with one installed on your Mac, or run `Scripts/test-ui.sh` to select an available iPhone automatically. Set `LYRX_UI_DESTINATION` to test another simulator. The CI workflow runs this interface suite after core checks and platform builds. UI tests use a Debug-only fixture service and an isolated preference suite; Release builds do not contain that test mode. Core tests are available through the Swift package.
+Replace the simulator name with one installed on your Mac, or run `Scripts/test-ui.sh` to select an available iPhone automatically. Set `LYRX_UI_DESTINATION` to test another simulator. Run `LYRX_UI_DESTINATION='platform=macOS' Scripts/test-ui.sh` for Mac keyboard navigation and results-table tests. CI runs both interface suites after core checks and platform builds. UI tests use a Debug-only fixture service and an isolated preference suite; Release builds do not contain that test mode. Core tests are available through the Swift package.
 
 See [accessibility verification](Documentation/Accessibility.md) for the hardware and manual checklist. Automated tests and accessibility-tree inspection do not establish compatibility with a particular braille display or translation table. Physical braille validation remains necessary before a public release.
 

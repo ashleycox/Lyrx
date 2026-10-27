@@ -20,3 +20,8 @@ jobs:
         run: Scripts/verify.sh
       - name: Test iPhone interface
         run: Scripts/test-ui.sh
+      - name: Test Mac interface
+        env:
+          LYRX_UI_DESTINATION: platform=macOS
+          LYRX_UI_BUILD_ROOT: ${{ runner.temp }}/lyrx-mac-ui
+        run: Scripts/test-ui.sh

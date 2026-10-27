@@ -55,8 +55,9 @@ struct LyrxCommands: Commands {
         CommandMenu("Search Results") {
             Button("Show or Hide Filters") { reader?.showFilters.toggle() }.keyboardShortcut(
                 "f", modifiers: [.command, .option])
-            Button("Show or Hide Other Matches") { reader?.showMatches.toggle() }.keyboardShortcut(
-                "m", modifiers: [.command, .option])
+            Button("Show or Hide Other Matches") { reader?.toggleMatches(focusResults: true) }
+                .keyboardShortcut("m", modifiers: [.command, .option])
+                .disabled(reader?.matches.isEmpty != false)
             Button("Previous Match") { selectRelative(-1) }.keyboardShortcut("[", modifiers: [.command, .option])
                 .disabled(reader?.matches.isEmpty != false)
             Button("Next Match") { selectRelative(1) }.keyboardShortcut("]", modifiers: [.command, .option]).disabled(

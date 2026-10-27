@@ -17,8 +17,12 @@ private struct ImmediateService: LyricSearching {
 
 /// Deliberately ignores cancellation so the tests exercise the generation guard, not URLSession.
 private actor SuspendedService: LyricSearching {
+    private let delaysLyrics: Bool
     private var pending: [String: CheckedContinuation<SearchResponse, Never>] = [:]
     private var arrivals: [String: CheckedContinuation<Void, Never>] = [:]
+    private var pendingLyrics: CheckedContinuation<String, Never>?
+    private var lyricsArrival: CheckedContinuation<Void, Never>?
+    init(delaysLyrics: Bool = false) { self.delaysLyrics = delaysLyrics }
     func search(_ request: SearchRequest, enabled: Set<LyricProviderID>) async throws -> SearchResponse {
         await withCheckedContinuation { continuation in
             pending[request.query] = continuation
@@ -36,7 +40,22 @@ private actor SuspendedService: LyricSearching {
                     provider: .lrclib, providerID: name, title: name, artist: "Test", lyrics: "First line\nSecond line")
             ]))
     }
-    func lyrics(for match: LyricMatch) async throws -> String { match.lyrics ?? "" }
+    func lyrics(for match: LyricMatch) async throws -> String {
+        guard delaysLyrics else { return match.lyrics ?? "" }
+        return await withCheckedContinuation { continuation in
+            pendingLyrics = continuation
+            lyricsArrival?.resume()
+            lyricsArrival = nil
+        }
+    }
+    func waitForLyrics() async {
+        if pendingLyrics != nil { return }
+        await withCheckedContinuation { lyricsArrival = $0 }
+    }
+    func completeLyrics() {
+        pendingLyrics?.resume(returning: "First line\nSecond line")
+        pendingLyrics = nil
+    }
 }
 
 @MainActor struct ReaderModelTests {
@@ -86,6 +105,44 @@ private actor SuspendedService: LyricSearching {
         #expect(model.document.lines == ["Wonderful day"])
         #expect(model.formattingError == nil)
     }
+    @Test func browsingMatchesDoesNotRequestReaderFocus() async throws {
+        let (settings, defaults, name) = preferences()
+        defer { defaults.removePersistentDomain(forName: name) }
+        let matches = [
+            LyricMatch(provider: .lrclib, providerID: "1", title: "First", artist: "Test", lyrics: "First line"),
+            LyricMatch(provider: .lrclib, providerID: "2", title: "Second", artist: "Test", lyrics: "Second line"),
+        ]
+        let model = ReaderModel(service: ImmediateService(matches: matches))
+        model.request.query = "Test"
+        model.search(settings: settings)
+        await model.waitForCurrentOperation()
+        let searchFocus = try #require(model.pendingReaderFocusID)
+        #expect(model.consumeReaderFocus(searchFocus))
+        // A remounted reader must not be able to repeat the old accessibility focus notification.
+        #expect(!model.consumeReaderFocus(searchFocus))
+
+        model.select(matches[1], settings: settings, focusOnLoad: false)
+        await model.waitForCurrentOperation()
+        #expect(model.document.text == "Second line")
+        #expect(model.readerFocusID == searchFocus)
+        #expect(model.pendingReaderFocusID == nil)
+
+        model.toggleMatches(focusResults: true)
+        let tableFocus = try #require(model.pendingMatchesFocusID)
+        #expect(model.showMatches)
+        #expect(model.consumeMatchesFocus(tableFocus))
+        #expect(!model.consumeMatchesFocus(tableFocus))
+        model.focusReader()
+        let explicitFocus = try #require(model.pendingReaderFocusID)
+        #expect(explicitFocus != searchFocus)
+        model.select(matches[0], settings: settings, focusOnLoad: false)
+        #expect(!model.consumeReaderFocus(explicitFocus))
+        await model.waitForCurrentOperation()
+        #expect(model.pendingReaderFocusID == nil)
+        model.toggleMatches(focusResults: true)
+        #expect(!model.showMatches)
+        #expect(model.pendingReaderFocusID != nil)
+    }
     @Test func lateSearchCannotOverwriteNewerSearch() async {
         let (settings, defaults, name) = preferences()
         defer { defaults.removePersistentDomain(forName: name) }
@@ -105,6 +162,26 @@ private actor SuspendedService: LyricSearching {
         await Task.yield()
         #expect(model.selected?.title == "New")
         #expect(!model.isSearching)
+    }
+    @Test func openingMatchesDuringLoadingPreservesFocus() async throws {
+        let (settings, defaults, name) = preferences()
+        defer { defaults.removePersistentDomain(forName: name) }
+        let service = SuspendedService(delaysLyrics: true)
+        let model = ReaderModel(service: service)
+        let oldFocus = model.readerFocusID
+        model.request.query = "Example"
+        model.search(settings: settings)
+        await service.waitForRequest("Example")
+        await service.complete("Example")
+        await service.waitForLyrics()
+        model.toggleMatches(focusResults: true)
+        let tableFocus = try #require(model.pendingMatchesFocusID)
+        #expect(model.consumeMatchesFocus(tableFocus))
+        await service.completeLyrics()
+        await model.waitForCurrentOperation()
+        #expect(model.hasLyrics)
+        #expect(model.readerFocusID == oldFocus)
+        #expect(model.pendingReaderFocusID == nil)
     }
     @Test func providerChangeCancelsPendingSearch() async {
         let (settings, defaults, name) = preferences()

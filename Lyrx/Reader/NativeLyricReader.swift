@@ -41,6 +41,11 @@ import SwiftUI
         func updateNSView(_ scroll: NSScrollView, context: Context) {
             guard let text = scroll.documentView as? NSTextView else { return }
             let coordinator = context.coordinator
+            // SwiftUI may update a representable once more before removing an empty reader.
+            guard model.hasLyrics else {
+                coordinator.focusTask?.cancel()
+                return
+            }
             coordinator.model = model
             coordinator.singleLine = settings.singleLine
             coordinator.updating = true
@@ -60,13 +65,15 @@ import SwiftUI
                 text.setSelectedRange(NSRange(location: offset, length: 0))
                 text.scrollRangeToVisible(text.selectedRange())
             }
-            if coordinator.lastFocus != model.readerFocusID {
-                coordinator.lastFocus = model.readerFocusID
+            if let requestID = model.pendingReaderFocusID, coordinator.lastFocus != requestID {
+                coordinator.lastFocus = requestID
                 // The view is attached by the time this main-actor task runs. Ordinary redraws never refocus it.
                 coordinator.focusTask?.cancel()
                 coordinator.focusTask = Task { @MainActor [weak text] in
                     await Task.yield()
-                    guard !Task.isCancelled, let text, let window = text.window else { return }
+                    guard !Task.isCancelled, let text, let window = text.window,
+                        model.consumeReaderFocus(requestID)
+                    else { return }
                     window.makeFirstResponder(text)
                     NSAccessibility.post(element: text, notification: .focusedUIElementChanged)
                 }
@@ -126,6 +133,10 @@ import SwiftUI
 
         func updateUIView(_ text: PanningTextView, context: Context) {
             let coordinator = context.coordinator
+            guard model.hasLyrics else {
+                coordinator.focusTask?.cancel()
+                return
+            }
             coordinator.model = model
             coordinator.singleLine = settings.singleLine
             coordinator.updating = true
@@ -149,12 +160,14 @@ import SwiftUI
                 text.selectedRange = NSRange(location: offset, length: 0)
                 text.scrollRangeToVisible(text.selectedRange)
             }
-            if coordinator.lastFocus != model.readerFocusID {
-                coordinator.lastFocus = model.readerFocusID
+            if let requestID = model.pendingReaderFocusID, coordinator.lastFocus != requestID {
+                coordinator.lastFocus = requestID
                 coordinator.focusTask?.cancel()
                 coordinator.focusTask = Task { @MainActor [weak text] in
                     await Task.yield()
-                    guard !Task.isCancelled, let text, text.window != nil else { return }
+                    guard !Task.isCancelled, let text, text.window != nil,
+                        model.consumeReaderFocus(requestID)
+                    else { return }
                     text.becomeFirstResponder()
                     UIAccessibility.post(notification: .layoutChanged, argument: text)
                 }

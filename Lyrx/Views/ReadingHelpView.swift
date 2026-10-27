@@ -10,6 +10,9 @@ struct ReadingHelpView: View {
                         Text(
                             "Press Command–F, type a song title, artist, or both, then Return. The best available match opens in the lyric text control. Show Filters for artist, title, or album. Other Matches lets you choose another recording or source."
                         )
+                        Text(
+                            "Command–Option–M opens and focuses the Other Matches table. It has title, artist, album, and provider columns. Selecting a row updates the lyrics while keeping focus in the table. Press Return, double-click, or choose Read Lyrics to move into the reader."
+                        )
                     #else
                         Text(
                             "Enter a song title, artist, or both in Search Lyrics, then tap Search. The best available match opens in the lyric text control. Show Filters for artist, title, or album. Other Matches lets you choose another recording or source."
