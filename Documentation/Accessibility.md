@@ -8,6 +8,8 @@ Core tests verify hard widths (including spaces and punctuation), intact words a
 
 Focus requests are consumed once. Core tests verify that browsing a match can update the lyric without requesting reader focus, and that an old focus request cannot be replayed after a text view is recreated. The focused Mac interface test checks an adjacent row, crosses the scroll boundary in one keyboard-input batch, and visits an instrumental result that temporarily removes the text view. Application-level key events detect focus escaping into the reader without a separate wait for every equivalent row.
 
+After Return, Up must no longer select the preceding instrumental row. This guards against leaving keyboard focus in the table without assuming that bare arrow keys move a read-only text caret on every system. The smoke test separately checks the Next Line action; exact VoiceOver focus and braille routing still require the manual checks below.
+
 Use `Scripts/test-ui.sh macOS focus` for this regression, `Scripts/test-ui.sh iOS large-text` for Dynamic Type layout, and `Scripts/test-ui.sh iOS settings` for provider controls. The default runner selects one Mac smoke test. Broader suites are explicit and are not run on every push; see the verification policy in `AGENTS.md`.
 
 ## Runtime checks performed

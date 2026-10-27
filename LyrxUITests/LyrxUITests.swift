@@ -97,12 +97,12 @@ final class LyrxUITests: XCTestCase {
             expectation(for: NSPredicate(format: "value CONTAINS %@", "A final page"), evaluatedWith: reader)
             waitForExpectations(timeout: 3)
             app.typeKey(.return, modifierFlags: [])
-            app.typeKey(.downArrow, modifierFlags: [])
-            // SwiftUI exposes static text as a label or value depending on the macOS version.
-            let secondLine = app.staticTexts.containing(
-                NSPredicate(format: "label == %@ OR value == %@", "Line 2 of 2", "Line 2 of 2")
-            ).firstMatch
-            XCTAssertTrue(secondLine.waitForExistence(timeout: 5), app.debugDescription)
+            // If Return leaves focus in the table, Up selects the preceding instrumental
+            // and removes the reader. Check table exit independently of native read-only
+            // caret behavior; the smoke test covers Lyrx's Next Line action.
+            app.typeKey(.upArrow, modifierFlags: [])
+            XCTAssertTrue(reader.exists)
+            XCTAssertTrue((reader.value as? String)?.contains("A final page") == true)
         }
     #endif
 }
