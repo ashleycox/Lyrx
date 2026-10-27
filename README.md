@@ -6,7 +6,7 @@ Search by song title, artist, or both. Lyrx searches your enabled services, rank
 
 ## Reading
 
-On Mac, press **Command–F**, enter your search, and press **Return**. **Command–L** (**Lyrics → Focus Lyrics**) returns to the loaded lyric text from Search or Other Matches, keeping your current reading position. The command is available once lyric text has loaded and can be formatted. On iPhone and iPad, enter your query and use Search. Read within the native text control using your normal VoiceOver text navigation and braille panning.
+On Mac, press **Command–F**, enter your search, and press **Return**. **Command–L** (**Lyrics → Focus Lyrics**) returns to the loaded lyric text from Search or Other Matches without resetting the text caret. The command is available once lyric text has loaded and can be formatted. On iPhone and iPad, enter your query and use Search. Read within the native text control using your normal VoiceOver text navigation and braille panning.
 
 **Show line controls and highlighting** in Settings is an optional visual reading aid, off by default. It adds Previous Line and Next Line buttons, a position count, and a background highlight on the current line's text. It tracks the text caret, not VoiceOver's cursor or braille position. On Mac, **Command–Shift–N** toggles it; the Lyrics menu and **Command–Option–Up/Down Arrow** also move between formatted lines. On iOS, line navigation is available through the reader's VoiceOver actions. Enable the controls to navigate one-line mode by touch.
 
