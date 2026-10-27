@@ -11,7 +11,7 @@ Use Xcode 26.6 or later and Swift 6 strict concurrency. Keep the project file at
 - Comment the reason behind accessibility behavior, API boundaries, unusual formatting, and concurrency decisions. Prefer small types with clear responsibilities.
 - Preserve native text selection and accessibility APIs. A multiline label or HTML view is not a substitute for the reader.
 - Keep hard line limits, including spaces and punctuation. Never split a word or grapheme. An oversized word must produce an actionable formatting error; Unlimited is an explicit choice.
-- Keep help and settings specific to the platform being used. Mac users must not see touch-platform instructions.
+- Keep help and settings specific to the platform being used. For example, Mac users must not see touch-platform instructions.
 - Use semantic colors, Dynamic Type where supported, native controls, and keyboard access. Test large text and small windows. Avoid animation that interferes with reading focus.
 - Do not add a dependency, service, data collection, persistent lyric storage, or permission without discussing its purpose and implications first.
 
@@ -25,7 +25,7 @@ Use documented public HTTPS APIs, not webpage scraping. Record endpoint contract
 
 Run `Scripts/verify.sh`. Add meaningful tests for behavioral changes using Swift Testing and original fixture text. Do not make routine tests depend on public service availability. Build both macOS and iOS after changes to shared code. Use `Documentation/Accessibility.md` for manual checks; state the actual platform, assistive technology, and display tested.
 
-Keep UI verification fast, as required by `AGENTS.md`. Run `Scripts/test-ui.sh` for one Mac smoke test, or select an affected check such as `Scripts/test-ui.sh macOS focus`, `Scripts/test-ui.sh macOS reader-focus`, `Scripts/test-ui.sh macOS details`, or `Scripts/test-ui.sh iOS large-text`. Reuse the default build directories. Do not run both full platform suites after each edit, loop over equivalent rows, add fixed sleeps, or retain screenshots for every successful test. After a failure, inspect its evidence and rerun only that check. The separate UI checks workflow is manual; routine CI uses fast core tests and platform builds. Report measured test execution separately from build and simulator startup.
+Keep UI verification efficient, as required by `AGENTS.md`. Run `Scripts/test-ui.sh` for one Mac smoke test, or select an affected check such as `Scripts/test-ui.sh macOS focus`, `Scripts/test-ui.sh macOS reader-focus`, `Scripts/test-ui.sh macOS details`, or `Scripts/test-ui.sh iOS large-text`. Reuse the default build directories. Do not run both full platform suites after each edit, loop over equivalent rows, add fixed sleeps, or retain screenshots for every successful test. After a failure, inspect its evidence and rerun only that check. The separate UI checks workflow is manual; routine CI uses fast core tests and platform builds. Report measured test execution separately from build and simulator startup.
 
 Pull requests should explain the problem, the resulting behavior, why the approach was chosen, verification commands and results, and any untested behavior. Include screenshots for visual changes where useful, without copyrighted lyrics or personal information. Keep commits short and descriptive. Preserve any required human sign-offs; do not add tool attribution.
 

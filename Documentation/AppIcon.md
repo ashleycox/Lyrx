@@ -1,6 +1,6 @@
 # App icon
 
-Lyrx's icon is a hand holding a silver microphone over a deep teal gradient. The microphone suggests singing and lyrics; the open space around the emblem keeps its silhouette clear at small sizes.
+Lyrx's icon was created using GPT 6 Astra in Codex. It is a hand holding a silver microphone over a deep teal gradient. The microphone suggests singing and lyrics; the open space around the emblem keeps its silhouette clear at small sizes.
 
 ![Lyrx app icon](Images/AppIcon.png)
 
