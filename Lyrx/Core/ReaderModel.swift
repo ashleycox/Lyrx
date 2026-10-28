@@ -6,8 +6,8 @@ import Observation
 final class ReaderModel {
     var request = SearchRequest()
     private(set) var matches: [LyricMatch] = []
-    private(set) var selected: LyricMatch?
-    private(set) var rawLyrics = ""
+    private var loadedMatch: LyricMatch?
+    private var rawLyrics = ""
     private(set) var document = FormattedLyrics(lines: [])
     private(set) var currentLine = 0
     private(set) var isSearching = false
@@ -23,36 +23,32 @@ final class ReaderModel {
     var showMatches = false
     var showHelp = false
     var searchScope: LyricProviderID?
-    var showAdditionalInfo = false
-    private(set) var infoMatch: LyricMatch?
-    private(set) var isLoadingInfo = false
-    private(set) var infoError: String?
-    private var infoOperation: Task<Void, Never>?
-    private var infoGeneration = UUID()
-    private var infoCache: [LyricMatch.ID: LyricMatch] = [:]
-    private let service: any LyricSearching
-    private var operation: Task<Void, Never>?
-    private var generation = UUID()
-    private var shouldFocusSearchResult = true
+    let info: RecordingInfoModel
+    @ObservationIgnored private let service: any LyricSearching
+    @ObservationIgnored private var operation: Task<Void, Never>?
+    @ObservationIgnored private var generation = UUID()
+    @ObservationIgnored private var shouldFocusSearchResult = true
 
-    init(service: any LyricSearching = ProviderClient()) { self.service = service }
-
-    isolated deinit {
-        operation?.cancel()
-        infoOperation?.cancel()
+    init(service: any LyricSearching = ProviderClient()) {
+        self.service = service
+        info = RecordingInfoModel(service: service)
     }
 
+    isolated deinit { operation?.cancel() }
+
+    var selected: LyricMatch? { loadedMatch.map(info.enriched) }
     var canSearch: Bool { !request.cleaned.isEmpty }
     var hasLyrics: Bool { !document.lines.isEmpty }
     var lineStatus: String { hasLyrics ? "Line \(currentLine + 1) of \(document.lines.count)" : "No lyric lines" }
     var canGoBack: Bool { hasLyrics && currentLine > 0 }
     var canGoForward: Bool { hasLyrics && currentLine + 1 < document.lines.count }
 
-    func search(settings: AppSettings, focusResults: Bool = false) {
-        guard canSearch else { return }
+    /// The model owns cancellation; callers may await the returned task across replacement.
+    @discardableResult
+    func search(settings: AppSettings, focusResults: Bool = false) -> Task<Void, Never>? {
+        guard canSearch else { return nil }
         cancel()
-        closeInfo()
-        infoCache.removeAll()
+        info.reset()
         shouldFocusSearchResult = !focusResults
         let token = generation
         let snapshot = request.cleaned
@@ -61,55 +57,57 @@ final class ReaderModel {
         status = "Searching enabled providers…"
         matches = []
         notices = []
-        selected = nil
+        loadedMatch = nil
         rawLyrics = ""
         document = FormattedLyrics(lines: [])
+        currentLine = 0
         formattingError = nil
         guard !access.searchable.isEmpty else {
             isSearching = false
             status =
                 "No configured service is available for this search. Enable a service or enter a valid contact email for lrc.red in Settings."
-            return
+            return nil
         }
         // A user action owns this task. It is cancelled on replacement, window closure, and deinit.
-        operation = Task { [weak self, service] in
+        let task = Task { [weak self, service] in
             do {
                 let response = try await service.search(snapshot, access: access)
-                guard let self, self.isCurrent(token) else { return }
-                self.matches = response.matches
-                self.notices = response.notices
+                guard self?.isCurrent(token) == true else { return }
+                self?.matches = response.matches
+                self?.notices = response.notices
                 guard !response.matches.isEmpty else {
-                    self.status =
+                    self?.status =
                         response.notices.isEmpty
                         ? "No matches. Try a shorter search or change the filters."
                         : "No matches were returned. Check the service messages below."
-                    self.isSearching = false
+                    self?.isSearching = false
                     return
                 }
                 if focusResults {
-                    self.showMatches = true
-                    self.focusMatches()
+                    self?.showMatches = true
+                    self?.focusMatches()
                 }
                 // Bound automatic lookups; remaining candidates are available in Other Matches.
                 var lastError: (any Error)?
                 let vocalMatches = response.matches.filter { !$0.instrumental }
                 let candidates = vocalMatches.isEmpty ? response.matches : vocalMatches
                 for match in candidates.prefix(5) {
-                    guard self.isCurrent(token) else { return }
-                    self.status = "Loading the best available match…"
+                    guard self?.isCurrent(token) == true else { return }
+                    self?.status = "Loading the best available match…"
                     do {
                         let lyrics = try await service.lyrics(for: match, access: access)
-                        guard self.isCurrent(token) else { return }
+                        guard let self, self.isCurrent(token) else { return }
                         self.install(
                             match, lyrics: lyrics, options: settings.formatting,
                             focusOnLoad: self.shouldFocusSearchResult)
                         self.isSearching = false
                         return
                     } catch {
-                        guard self.isCurrent(token) else { return }
+                        guard self?.isCurrent(token) == true else { return }
                         lastError = error
                     }
                 }
+                guard let self, self.isCurrent(token) else { return }
                 self.status = lastError.map(ProviderClient.message) ?? "No lyrics are available for these matches."
                 self.showMatches = true
                 self.isSearching = false
@@ -119,17 +117,20 @@ final class ReaderModel {
                 self.isSearching = false
             }
         }
+        operation = task
+        return task
     }
 
     /// Table selection can update the lyric without interrupting keyboard or VoiceOver browsing.
-    func select(_ match: LyricMatch, settings: AppSettings, focusOnLoad: Bool = true) {
+    @discardableResult
+    func select(_ match: LyricMatch, settings: AppSettings, focusOnLoad: Bool = true) -> Task<Void, Never>? {
         let access = settings.providerAccess
-        guard access.searchable.contains(match.provider) else { return }
+        guard access.searchable.contains(match.provider) else { return nil }
         cancel()
         let token = generation
         isSearching = true
         status = "Loading \(match.title)…"
-        operation = Task { [weak self, service] in
+        let task = Task { [weak self, service] in
             do {
                 let lyrics = try await service.lyrics(for: match, access: access)
                 guard let self, self.isCurrent(token) else { return }
@@ -141,6 +142,8 @@ final class ReaderModel {
                 self.isSearching = false
             }
         }
+        operation = task
+        return task
     }
 
     func cancel() {
@@ -153,78 +156,23 @@ final class ReaderModel {
         isSearching = false
     }
 
-    /// Allows deterministic callers (including tests) to await the operation they just started.
-    func waitForCurrentOperation() async { await operation?.value }
-
     func providersChanged(_ enabled: Set<LyricProviderID>) {
         cancel()
-        cancelInfo()
+        info.providersChanged(enabled)
         matches.removeAll { !enabled.contains($0.provider) }
-        if let match = infoMatch, !match.detailsComplete, !enabled.contains(match.provider) {
-            infoError = LyricServiceError.providerNotConfigured.localizedDescription
-        }
     }
 
     /// Related links scope this search only; they never change saved provider preferences.
-    func searchRelated(_ field: RelatedSearch, match: LyricMatch, settings: AppSettings) {
+    @discardableResult
+    func searchRelated(_ field: RelatedSearch, match: LyricMatch, settings: AppSettings) -> Task<Void, Never>? {
         guard settings.providerAccess.searchable.contains(match.provider),
             !match.artist.isEmpty, field != .album || !match.album.isEmpty
-        else { return }
-        closeInfo()
+        else { return nil }
         searchScope = match.provider
         request = SearchRequest(artist: match.artist, album: field == .album ? match.album : "")
         showFilters = true
-        search(settings: settings, focusResults: true)
+        return search(settings: settings, focusResults: true)
     }
-
-    func openInfo(for match: LyricMatch, settings: AppSettings) {
-        cancelInfo()
-        let match = infoCache[match.id] ?? match
-        infoMatch = match
-        showAdditionalInfo = true
-        infoError = nil
-        guard !match.detailsComplete else { return }
-        let access = settings.providerAccess
-        guard access.searchable.contains(match.provider) else {
-            infoError = LyricServiceError.providerNotConfigured.localizedDescription
-            return
-        }
-        isLoadingInfo = true
-        let token = infoGeneration
-        infoOperation = Task { [weak self, service] in
-            do {
-                let enriched = try await service.details(for: match, access: access)
-                guard let self, self.infoGeneration == token, !Task.isCancelled else { return }
-                self.infoMatch = enriched
-                // Reuse fetched metadata in this window without retaining it on disk.
-                if self.selected?.id == enriched.id {
-                    self.selected?.metadata = enriched.metadata
-                    self.selected?.detailsComplete = true
-                }
-                var cached = enriched
-                cached.lyrics = nil
-                self.infoCache[enriched.id] = cached
-                self.isLoadingInfo = false
-            } catch {
-                guard let self, self.infoGeneration == token, !Task.isCancelled else { return }
-                self.infoError = ProviderClient.message(for: error)
-                self.isLoadingInfo = false
-            }
-        }
-    }
-
-    func cancelInfo() {
-        infoOperation?.cancel()
-        infoOperation = nil
-        infoGeneration = UUID()
-        isLoadingInfo = false
-    }
-
-    func closeInfo() {
-        cancelInfo()
-        showAdditionalInfo = false
-    }
-    func waitForInfoOperation() async { await infoOperation?.value }
 
     func reformat(_ options: FormattingOptions) {
         guard !rawLyrics.isEmpty else { return }
@@ -297,7 +245,7 @@ final class ReaderModel {
     private func install(
         _ match: LyricMatch, lyrics: String, options: FormattingOptions, focusOnLoad: Bool = true
     ) {
-        selected = match
+        loadedMatch = match
         rawLyrics = lyrics
         currentLine = 0
         formattingError = nil

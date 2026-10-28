@@ -8,7 +8,7 @@ struct AdditionalInfoView: View {
     var body: some View {
         NavigationStack {
             Form {
-                if let match = model.infoMatch {
+                if let match = model.info.match {
                     Section("Recording") {
                         LabeledContent("Title", value: match.title)
                         LabeledContent("Artist") {
@@ -22,10 +22,10 @@ struct AdditionalInfoView: View {
                         LabeledContent("Provider ID", value: match.providerID)
                         Link("Metadata from \(match.provider.name)", destination: match.sourceURL)
                     }
-                    if model.isLoadingInfo { ProgressView("Loading additional information…") }
-                    if let error = model.infoError { Text(error).foregroundStyle(.secondary) }
+                    if model.info.isLoading { ProgressView("Loading additional information…") }
+                    if let error = model.info.error { Text(error).foregroundStyle(.secondary) }
                     Section("Provider Metadata") {
-                        if match.metadata.isEmpty && !model.isLoadingInfo {
+                        if match.metadata.isEmpty && !model.info.isLoading {
                             Text("This service did not return additional metadata for this match.").foregroundStyle(
                                 .secondary)
                         }
@@ -48,7 +48,7 @@ struct AdditionalInfoView: View {
             .accessibilityIdentifier("additionalInfo")
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { model.closeInfo() }.keyboardShortcut(.cancelAction)
+                    Button("Done") { model.info.close() }.keyboardShortcut(.cancelAction)
                 }
             }
         }

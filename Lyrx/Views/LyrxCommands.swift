@@ -23,7 +23,7 @@ struct LyrxCommands: Commands {
         CommandMenu("Lyrics") {
             Button("Focus Lyrics") { reader?.focusReader() }.keyboardShortcut("l").disabled(reader?.hasLyrics != true)
             Button("Additional Info") {
-                if let reader, let match = reader.selected { reader.openInfo(for: match, settings: settings) }
+                if let reader, let match = reader.selected { reader.info.open(match, access: settings.providerAccess) }
             }.keyboardShortcut("i").disabled(reader?.selected == nil || reader?.isSearching == true)
             Button("Previous Line") { if let reader { reader.go(to: reader.currentLine - 1) } }
                 .keyboardShortcut(.upArrow, modifiers: [.command, .option]).disabled(reader?.canGoBack != true)

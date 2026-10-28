@@ -40,6 +40,10 @@
             table.beganBrowsing = { [weak coordinator = context.coordinator] in
                 coordinator?.model.beginBrowsingMatches()
             }
+            table.didAttachToWindow = { [weak table, weak coordinator = context.coordinator] in
+                guard let table else { return }
+                coordinator?.scheduleFocus(in: table)
+            }
             let menu = NSMenu()
             menu.autoenablesItems = false
             let item = NSMenuItem(title: "Read Lyrics", action: #selector(Coordinator.readFromMenu), keyEquivalent: "")
@@ -77,27 +81,16 @@
                     table.deselectAll(nil)
                 }
             }
-            if let requestID = model.pendingMatchesFocusID, coordinator.lastFocusID != requestID {
-                coordinator.lastFocusID = requestID
-                coordinator.focusTask?.cancel()
-                coordinator.focusTask = Task { @MainActor [weak table] in
-                    await Task.yield()
-                    guard !Task.isCancelled, let table, let window = table.window,
-                        model.consumeMatchesFocus(requestID)
-                    else { return }
-                    window.makeFirstResponder(table)
-                    if table.selectedRow >= 0 { table.scrollRowToVisible(table.selectedRow) }
-                    NSAccessibility.post(element: table, notification: .focusedUIElementChanged)
-                }
-            }
+            coordinator.scheduleFocus(in: table)
         }
 
         static func dismantleNSView(_ scroll: NSScrollView, coordinator: Coordinator) {
-            coordinator.focusTask?.cancel()
+            coordinator.focus.cancel()
             guard let table = scroll.documentView as? ResultsTableView else { return }
             table.delegate = nil
             table.dataSource = nil
             table.menu?.delegate = nil
+            table.didAttachToWindow = nil
             table.readSelection = nil
             table.beganBrowsing = nil
         }
@@ -108,13 +101,26 @@
             var matches: [LyricMatch] = []
             var lastLoadedID: LyricMatch.ID?
             var updating = false
-            var lastFocusID: UUID?
-            var focusTask: Task<Void, Never>?
+            let focus = FocusRequestScheduler()
             weak var table: ResultsTableView?
 
             init(model: ReaderModel, settings: AppSettings) {
                 self.model = model
                 self.settings = settings
+            }
+
+            func scheduleFocus(in table: ResultsTableView) {
+                let requestID = model.pendingMatchesFocusID
+                focus.schedule(requestID, isAttached: table.window != nil) { [weak self, weak table] in
+                    guard let self, let table, let window = table.window, let requestID,
+                        !self.model.matches.isEmpty, self.model.pendingMatchesFocusID == requestID
+                    else { return false }
+                    return window.makeFirstResponder(table) && window.firstResponder === table
+                } accepted: { [weak self, weak table] in
+                    guard let self, let table, let requestID, self.model.consumeMatchesFocus(requestID) else { return }
+                    if table.selectedRow >= 0 { table.scrollRowToVisible(table.selectedRow) }
+                    NSAccessibility.post(element: table, notification: .focusedUIElementChanged)
+                }
             }
 
             func numberOfRows(in tableView: NSTableView) -> Int { matches.count }
@@ -193,7 +199,7 @@
 
             @objc func infoFromMenu() {
                 guard let table, matches.indices.contains(table.selectedRow) else { return }
-                model.openInfo(for: matches[table.selectedRow], settings: settings)
+                model.info.open(matches[table.selectedRow], access: settings.providerAccess)
             }
 
             @objc func searchArtist(_ sender: NSButton) { searchRelated(.artist, row: sender.tag) }
@@ -222,8 +228,14 @@
 
     /// All navigation remains AppKit's; only Return and keypad Enter open the selected lyric.
     final class ResultsTableView: NSTableView {
+        var didAttachToWindow: (() -> Void)?
         var readSelection: (() -> Void)?
         var beganBrowsing: (() -> Void)?
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            if window != nil { didAttachToWindow?() }
+        }
 
         override func becomeFirstResponder() -> Bool {
             let accepted = super.becomeFirstResponder()

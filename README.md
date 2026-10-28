@@ -77,7 +77,7 @@ This runs repository privacy checks, deterministic Swift Testing tests, and both
 swift test --scratch-path /tmp/lyrx-tests
 ```
 
-The standalone `Package.swift` builds the same core files used by the application. Tests cover hard limits, word preservation, Unicode ranges, LRC parsing, ranking, enabled providers, decoding, failures, cancellation, stale responses, and settings recovery. Fixtures contain original example text, not song lyrics. Routine CI runs these checks and builds without starting UI automation; a newer push cancels an obsolete Verify run.
+The standalone `Package.swift` builds the same core files used by the application. Tests cover hard limits, word preservation, Unicode ranges, LRC parsing, ranking, enabled providers, decoding, failures, cancellation, stale responses, settings recovery, metadata-cache lifetime, and deferred focus requests. Cancellation tests await replaced operations, including late failures. Fixtures contain original example text, not song lyrics. Routine CI runs these checks and builds without starting UI automation; a newer push cancels an obsolete Verify run.
 
 For UI changes, run the smallest relevant check. The default is a single Mac search-and-reading smoke test:
 

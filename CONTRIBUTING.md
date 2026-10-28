@@ -8,6 +8,8 @@ Use Xcode 26.6 or later and Swift 6 strict concurrency. Keep the project file at
 
 - Put provider adapters, formatting, ranking, and state logic in `Lyrx/Core`; native text bridges belong in `Lyrx/Reader`, and interface components in `Lyrx/Views`.
 - Keep UI state on the main actor. Pass Sendable values between tasks. Cancel superseded work and check request identity after suspension. Do not silence isolation errors with unchecked conformances.
+- `ReaderModel` owns search, lyric selection, and reading position. Its `RecordingInfoModel` owns the details sheet, metadata requests, and per-search metadata cache. Keep lyric text out of that cache. Task handles and request generations are implementation state, not observable interface state.
+- Native readers and the Mac results table share `FocusRequestScheduler`. Schedule only attached views, check that the request is still pending when attempting focus, and consume it only after the native responder accepts focus. Attachment can retry a pending request; teardown must cancel scheduled work.
 - Comment the reason behind accessibility behavior, API boundaries, unusual formatting, and concurrency decisions. Prefer small types with clear responsibilities.
 - Preserve native text selection and accessibility APIs. A multiline label or HTML view is not a substitute for the reader.
 - Keep hard line limits, including spaces and punctuation. Never split a word or grapheme. An oversized word must produce an actionable formatting error; Unlimited is an explicit choice.
@@ -24,6 +26,8 @@ Use documented public HTTPS APIs, not webpage scraping. Record endpoint contract
 ## Tests and review
 
 Run `Scripts/verify.sh`. Add meaningful tests for behavioral changes using Swift Testing and original fixture text. Do not make routine tests depend on public service availability. Build both macOS and iOS after changes to shared code. Use `Documentation/Accessibility.md` for manual checks; state the actual platform, assistive technology, and display tested.
+
+Search, selection, and recording-detail actions return their owned task for callers that need to await completion. Keep that handle when testing cancellation or replacement, then await the old operation before asserting that its response was rejected. A scheduler yield does not prove completion. Use the model's cancellation methods to cancel user actions.
 
 Keep UI verification efficient, as required by `AGENTS.md`. Run `Scripts/test-ui.sh` for one Mac smoke test, or select an affected check such as `Scripts/test-ui.sh macOS focus`, `Scripts/test-ui.sh macOS reader-focus`, `Scripts/test-ui.sh macOS details`, or `Scripts/test-ui.sh iOS large-text`. Reuse the default build directories. Do not run both full platform suites after each edit, loop over equivalent rows, add fixed sleeps, or retain screenshots for every successful test. After a failure, inspect its evidence and rerun only that check. The separate UI checks workflow is manual; routine CI uses fast core tests and platform builds. Report measured test execution separately from build and simulator startup.
 

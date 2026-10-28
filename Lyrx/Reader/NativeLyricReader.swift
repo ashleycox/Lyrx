@@ -47,7 +47,7 @@ import SwiftUI
             let coordinator = context.coordinator
             // SwiftUI may update a representable once more before removing an empty reader.
             guard model.hasLyrics else {
-                coordinator.cancelFocus()
+                coordinator.focus.cancel()
                 return
             }
             coordinator.model = model
@@ -93,7 +93,7 @@ import SwiftUI
         }
 
         static func dismantleNSView(_ nsView: NSScrollView, coordinator: Coordinator) {
-            coordinator.cancelFocus()
+            coordinator.focus.cancel()
             let text = nsView.documentView as? MacLyricTextView
             text?.didAttachToWindow = nil
             text?.delegate = nil
@@ -101,42 +101,22 @@ import SwiftUI
 
         @MainActor final class Coordinator: NSObject, NSTextViewDelegate {
             var model: ReaderModel
-            private var scheduledFocus: UUID?
             var lastSelection: UUID?
             var lastHighlight: NSRange?
             var updating = false
             var singleLine = false
-            var focusTask: Task<Void, Never>?
+            let focus = FocusRequestScheduler()
             init(model: ReaderModel) { self.model = model }
 
-            func cancelFocus() {
-                focusTask?.cancel()
-                focusTask = nil
-                scheduledFocus = nil
-            }
-
             func scheduleFocus(in text: NSTextView) {
-                guard let requestID = model.pendingReaderFocusID else {
-                    cancelFocus()
-                    return
-                }
-                // Attachment will call us again. A single Task.yield() cannot guarantee a window exists.
-                guard text.window != nil, scheduledFocus != requestID else { return }
-                cancelFocus()
-                scheduledFocus = requestID
-                focusTask = Task { @MainActor [weak self, weak text] in
-                    await Task.yield()
-                    guard !Task.isCancelled, let self else { return }
-                    defer {
-                        self.scheduledFocus = nil
-                        self.focusTask = nil
-                    }
-                    guard let text, let window = text.window, self.model.hasLyrics,
-                        self.model.pendingReaderFocusID == requestID,
-                        window.makeFirstResponder(text), window.firstResponder === text
-                    else { return }
-                    // Consume only after AppKit accepts focus. Failed or detached attempts stay pending.
-                    guard self.model.consumeReaderFocus(requestID) else { return }
+                let requestID = model.pendingReaderFocusID
+                focus.schedule(requestID, isAttached: text.window != nil) { [weak self, weak text] in
+                    guard let self, let text, let window = text.window, let requestID,
+                        self.model.hasLyrics, self.model.pendingReaderFocusID == requestID
+                    else { return false }
+                    return window.makeFirstResponder(text) && window.firstResponder === text
+                } accepted: { [weak self, weak text] in
+                    guard let self, let text, let requestID, self.model.consumeReaderFocus(requestID) else { return }
                     text.scrollRangeToVisible(text.selectedRange())
                     NSAccessibility.post(element: text, notification: .focusedUIElementChanged)
                 }
@@ -169,6 +149,10 @@ import SwiftUI
             text.textContainer.size = CGSize(width: 100_000, height: CGFloat.greatestFiniteMagnitude)
             text.textContainerInset = UIEdgeInsets(top: 12, left: 12, bottom: 12, right: 12)
             text.delegate = context.coordinator
+            text.didAttachToWindow = { [weak text, weak coordinator = context.coordinator] in
+                guard let text else { return }
+                coordinator?.scheduleFocus(in: text)
+            }
             text.accessibilityIdentifier = "lyricReader"
             text.accessibilityHint = "Read-only lyrics. Use text navigation or the Next Line and Previous Line actions."
             text.accessibilityCustomActions = [
@@ -183,7 +167,7 @@ import SwiftUI
         func updateUIView(_ text: PanningTextView, context: Context) {
             let coordinator = context.coordinator
             guard model.hasLyrics else {
-                coordinator.focusTask?.cancel()
+                coordinator.focus.cancel()
                 return
             }
             coordinator.model = model
@@ -224,34 +208,37 @@ import SwiftUI
                 text.selectedRange = NSRange(location: offset, length: 0)
                 text.scrollRangeToVisible(text.selectedRange)
             }
-            if let requestID = model.pendingReaderFocusID, coordinator.lastFocus != requestID {
-                coordinator.lastFocus = requestID
-                coordinator.focusTask?.cancel()
-                coordinator.focusTask = Task { @MainActor [weak text] in
-                    await Task.yield()
-                    guard !Task.isCancelled, let text, text.window != nil,
-                        model.consumeReaderFocus(requestID)
-                    else { return }
-                    text.becomeFirstResponder()
-                    UIAccessibility.post(notification: .layoutChanged, argument: text)
-                }
-            }
+            coordinator.scheduleFocus(in: text)
         }
 
         static func dismantleUIView(_ uiView: PanningTextView, coordinator: Coordinator) {
-            coordinator.focusTask?.cancel()
+            coordinator.focus.cancel()
+            uiView.didAttachToWindow = nil
             uiView.delegate = nil
         }
 
         @MainActor final class Coordinator: NSObject, UITextViewDelegate {
             var model: ReaderModel
-            var lastFocus: UUID?
             var lastSelection: UUID?
             var lastHighlight: NSRange?
             var singleLine = false
             var updating = false
-            var focusTask: Task<Void, Never>?
+            let focus = FocusRequestScheduler()
             init(model: ReaderModel) { self.model = model }
+            func scheduleFocus(in text: UITextView) {
+                let requestID = model.pendingReaderFocusID
+                focus.schedule(requestID, isAttached: text.window != nil) { [weak self, weak text] in
+                    guard let self, let text, text.window != nil, let requestID,
+                        self.model.hasLyrics, self.model.pendingReaderFocusID == requestID
+                    else { return false }
+                    return text.becomeFirstResponder() && text.isFirstResponder
+                } accepted: { [weak self, weak text] in
+                    guard let self, let text, let requestID, self.model.consumeReaderFocus(requestID) else { return }
+                    text.scrollRangeToVisible(text.selectedRange)
+                    UIAccessibility.post(notification: .layoutChanged, argument: text)
+                }
+            }
+
             func textViewDidChangeSelection(_ textView: UITextView) {
                 guard !updating, !singleLine else { return }
                 model.caretMoved(toUTF16Offset: textView.selectedRange.location)
@@ -271,6 +258,13 @@ import SwiftUI
 
     /// No visual soft wrapping: a formatted line remains one line, with horizontal touch panning.
     final class PanningTextView: UITextView {
+        var didAttachToWindow: (() -> Void)?
+
+        override func didMoveToWindow() {
+            super.didMoveToWindow()
+            if window != nil { didAttachToWindow?() }
+        }
+
         override func layoutSubviews() {
             super.layoutSubviews()
             // UITextView can reset its container during layout and Dynamic Type changes.

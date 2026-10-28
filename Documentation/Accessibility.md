@@ -14,7 +14,7 @@ After Return, Up must no longer select the preceding instrumental row. This guar
 
 Use `Scripts/test-ui.sh macOS focus` for table navigation, `Scripts/test-ui.sh macOS reader-focus` for repeated searches and Command–L from Search, `Scripts/test-ui.sh iOS large-text` for Dynamic Type layout, and `Scripts/test-ui.sh iOS settings` for provider controls. Use `Scripts/test-ui.sh macOS details` or `Scripts/test-ui.sh iOS details` for Additional Info, credits, and source-scoped album navigation. The default runner selects one Mac smoke test. Broader suites are explicit and are not run on every push; see the verification policy in `AGENTS.md`.
 
-The Mac reader keeps a focus request pending until its text view has a window and AppKit accepts it as first responder. Attachment retries a request that arrived before the view was ready. Successful requests are consumed once, so later layout updates cannot replay them. The reader-focus check sends input at application level to detect keyboard focus left in Search; it does not prove VoiceOver cursor or physical braille routing.
+Both native readers and the Mac results table keep a focus request pending until the view has a window and the platform accepts it as first responder. They share a scheduler that cancels superseded attempts and work belonging to a removed view. Attachment retries a request that arrived before the view was ready. Successful requests are consumed once, so later layout updates cannot replay them. Core tests simulate detachment, refused focus, replacement, and teardown without timers. The reader-focus check sends input at application level to detect keyboard focus left in Search; it does not prove VoiceOver cursor or physical braille routing.
 
 ## Runtime checks performed
 

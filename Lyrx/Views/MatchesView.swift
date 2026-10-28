@@ -42,8 +42,10 @@ struct MatchesView: View {
                                             field: .album, match: match, model: model, settings: settings)
                                     }
                                     Text(match.provider.name).font(.caption).foregroundStyle(.secondary)
-                                    Button("Additional Info") { model.openInfo(for: match, settings: settings) }
-                                        .font(.caption)
+                                    Button("Additional Info") {
+                                        model.info.open(match, access: settings.providerAccess)
+                                    }
+                                    .font(.caption)
                                 }.padding(.vertical, 8).accessibilityElement(children: .contain)
                                 Divider()
                             }

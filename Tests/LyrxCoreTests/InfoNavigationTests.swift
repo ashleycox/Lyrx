@@ -7,7 +7,7 @@ import Testing
 private actor InfoService: LyricSearching {
     var searches: [(SearchRequest, ProviderAccess)] = []
     var detailRequests: [String] = []
-    private var pending: [String: CheckedContinuation<LyricMatch, Never>] = [:]
+    private var pending: [String: CheckedContinuation<LyricMatch, any Error>] = [:]
     private var arrivals: [String: CheckedContinuation<Void, Never>] = [:]
 
     func search(_ request: SearchRequest, access: ProviderAccess) async throws -> SearchResponse {
@@ -17,7 +17,7 @@ private actor InfoService: LyricSearching {
     func lyrics(for match: LyricMatch, access: ProviderAccess) async throws -> String { "Original example line" }
     func details(for match: LyricMatch, access: ProviderAccess) async throws -> LyricMatch {
         detailRequests.append(match.providerID)
-        return await withCheckedContinuation { continuation in
+        return try await withCheckedThrowingContinuation { continuation in
             pending[match.providerID] = continuation
             arrivals.removeValue(forKey: match.providerID)?.resume()
         }
@@ -31,6 +31,9 @@ private actor InfoService: LyricSearching {
         match.metadata = [.init(id: "writer", label: "Songwriters", value: "Writer \(id)")]
         match.detailsComplete = true
         pending.removeValue(forKey: id)?.resume(returning: match)
+    }
+    func fail(_ id: String) {
+        pending.removeValue(forKey: id)?.resume(throwing: LyricServiceError.unavailable(503))
     }
     static func match(_ id: String) -> LyricMatch {
         .init(
@@ -56,8 +59,7 @@ private actor InfoService: LyricSearching {
         let saved = settings.providerAccess
         let service = InfoService()
         let model = ReaderModel(service: service)
-        model.searchRelated(field, match: InfoService.match("link"), settings: settings)
-        await model.waitForCurrentOperation()
+        await model.searchRelated(field, match: InfoService.match("link"), settings: settings)?.value
         let searches = await service.searches
         #expect(searches.count == 1)
         let (request, access) = try #require(searches.first)
@@ -80,8 +82,7 @@ private actor InfoService: LyricSearching {
         let service = InfoService()
         let model = ReaderModel(service: service)
         model.request.query = "example"
-        model.search(settings: settings)
-        await model.waitForCurrentOperation()
+        await model.search(settings: settings)?.value
         #expect(await service.searches.isEmpty)
         #expect(!model.isSearching)
         #expect(model.status.contains("No configured service"))
@@ -89,26 +90,91 @@ private actor InfoService: LyricSearching {
         #expect(await service.searches.isEmpty)
     }
 
-    @Test func staleInfoCannotReplaceNewerInfoAndReopeningUsesCache() async {
+    @Test(arguments: [false, true])
+    func staleInfoCannotReplaceNewerInfoAndReopeningUsesCache(oldRequestFails: Bool) async {
         let (settings, defaults, name) = preferences()
         defer { defaults.removePersistentDomain(forName: name) }
         let service = InfoService()
         let model = ReaderModel(service: service)
-        model.openInfo(for: InfoService.match("old"), settings: settings)
+        let oldInfo = model.info.open(InfoService.match("old"), access: settings.providerAccess)
         await service.waitForDetails("old")
-        model.openInfo(for: InfoService.match("new"), settings: settings)
+        let newInfo = model.info.open(InfoService.match("new"), access: settings.providerAccess)
         await service.waitForDetails("new")
-        await service.complete("old")
         await service.complete("new")
-        await model.waitForInfoOperation()
-        #expect(model.infoMatch?.providerID == "new")
-        #expect(model.infoMatch?.metadata.first?.value == "Writer new")
-        #expect(!model.isLoadingInfo)
-        model.closeInfo()
-        model.openInfo(for: InfoService.match("new"), settings: settings)
-        #expect(!model.isLoadingInfo)
-        #expect(model.infoMatch?.detailsComplete == true)
+        await newInfo?.value
+        if oldRequestFails { await service.fail("old") } else { await service.complete("old") }
+        await oldInfo?.value
+        #expect(model.info.match?.providerID == "new")
+        #expect(model.info.match?.metadata.first?.value == "Writer new")
+        #expect(!model.info.isLoading)
+        #expect(model.info.error == nil)
+        model.info.close()
+        model.info.open(InfoService.match("new"), access: settings.providerAccess)
+        #expect(!model.info.isLoading)
+        #expect(model.info.match?.detailsComplete == true)
         #expect(await service.detailRequests == ["old", "new"])
+    }
+
+    @Test func detailsEnrichTheReaderWithoutCachingLyricText() async {
+        let (settings, defaults, name) = preferences()
+        defer { defaults.removePersistentDomain(forName: name) }
+        let service = InfoService()
+        let model = ReaderModel(service: service)
+        var original = InfoService.match("selected")
+        original.lyrics = "Original private fixture text"
+        await model.select(original, settings: settings)?.value
+        let details = model.info.open(original, access: settings.providerAccess)
+        #expect(model.info.match?.lyrics == nil)
+        await service.waitForDetails("selected")
+        await service.complete("selected")
+        await details?.value
+        #expect(model.selected?.metadata.first?.value == "Writer selected")
+        #expect(model.selected?.lyrics == original.lyrics)
+        #expect(model.info.match?.lyrics == nil)
+        model.info.close()
+        #expect(model.info.open(original, access: settings.providerAccess) == nil)
+        #expect(model.info.match?.detailsComplete == true)
+        #expect(model.info.match?.lyrics == nil)
+    }
+
+    @Test func newSearchClearsDetailsAndRejectsAnOutstandingResponse() async {
+        let (settings, defaults, name) = preferences()
+        defer { defaults.removePersistentDomain(forName: name) }
+        let service = InfoService()
+        let model = ReaderModel(service: service)
+        let cached = model.info.open(InfoService.match("cached"), access: settings.providerAccess)
+        await service.waitForDetails("cached")
+        await service.complete("cached")
+        await cached?.value
+        let old = model.info.open(InfoService.match("old"), access: settings.providerAccess)
+        await service.waitForDetails("old")
+        model.request.query = "Example"
+        await model.search(settings: settings)?.value
+        await service.complete("old")
+        await old?.value
+        #expect(!model.info.isPresented)
+        #expect(model.info.match == nil)
+        let reopened = model.info.open(InfoService.match("cached"), access: settings.providerAccess)
+        await service.waitForDetails("cached")
+        #expect(model.info.isLoading)
+        #expect(await service.detailRequests == ["cached", "old", "cached"])
+        await service.complete("cached")
+        await reopened?.value
+    }
+
+    @Test func closingDetailsRejectsLateFailures() async {
+        let (settings, defaults, name) = preferences()
+        defer { defaults.removePersistentDomain(forName: name) }
+        let service = InfoService()
+        let model = ReaderModel(service: service)
+        let details = model.info.open(InfoService.match("closed"), access: settings.providerAccess)
+        await service.waitForDetails("closed")
+        model.info.close()
+        await service.fail("closed")
+        await details?.value
+        #expect(!model.info.isPresented)
+        #expect(!model.info.isLoading)
+        #expect(model.info.error == nil)
     }
 
     @Test func removingEmailCancelsPendingInfo() async {
@@ -116,16 +182,16 @@ private actor InfoService: LyricSearching {
         defer { defaults.removePersistentDomain(forName: name) }
         let service = InfoService()
         let model = ReaderModel(service: service)
-        model.openInfo(for: InfoService.match("old"), settings: settings)
+        let oldInfo = model.info.open(InfoService.match("old"), access: settings.providerAccess)
         await service.waitForDetails("old")
         settings.lrcRedEmail = ""
         model.providersChanged(settings.providerAccess.searchable)
         await service.complete("old")
-        await Task.yield()
-        #expect(!model.isLoadingInfo)
-        #expect(model.infoMatch?.metadata.isEmpty == true)
-        model.openInfo(for: InfoService.match("new"), settings: settings)
-        #expect(model.infoError != nil)
+        await oldInfo?.value
+        #expect(!model.info.isLoading)
+        #expect(model.info.match?.metadata.isEmpty == true)
+        model.info.open(InfoService.match("new"), access: settings.providerAccess)
+        #expect(model.info.error != nil)
         #expect(await service.detailRequests == ["old"])
     }
 }

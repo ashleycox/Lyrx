@@ -36,8 +36,7 @@
             ContentView(model: model).environment(settings)
                 .task {
                     model.request.query = "A Quiet Morning"
-                    model.search(settings: settings)
-                    await model.waitForCurrentOperation()
+                    await model.search(settings: settings)?.value
                 }
         }
     }

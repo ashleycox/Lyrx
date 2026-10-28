@@ -18,13 +18,13 @@ private struct ImmediateService: LyricSearching {
 /// Deliberately ignores cancellation so the tests exercise the generation guard, not URLSession.
 private actor SuspendedService: LyricSearching {
     private let delaysLyrics: Bool
-    private var pending: [String: CheckedContinuation<SearchResponse, Never>] = [:]
+    private var pending: [String: CheckedContinuation<SearchResponse, any Error>] = [:]
     private var arrivals: [String: CheckedContinuation<Void, Never>] = [:]
     private var pendingLyrics: CheckedContinuation<String, Never>?
     private var lyricsArrival: CheckedContinuation<Void, Never>?
     init(delaysLyrics: Bool = false) { self.delaysLyrics = delaysLyrics }
     func search(_ request: SearchRequest, access: ProviderAccess) async throws -> SearchResponse {
-        await withCheckedContinuation { continuation in
+        try await withCheckedThrowingContinuation { continuation in
             pending[request.query] = continuation
             arrivals.removeValue(forKey: request.query)?.resume()
         }
@@ -39,6 +39,9 @@ private actor SuspendedService: LyricSearching {
                 LyricMatch(
                     provider: .lrclib, providerID: name, title: name, artist: "Test", lyrics: "First line\nSecond line")
             ]))
+    }
+    func fail(_ name: String) {
+        pending.removeValue(forKey: name)?.resume(throwing: LyricServiceError.unavailable(503))
     }
     func lyrics(for match: LyricMatch, access: ProviderAccess) async throws -> String {
         guard delaysLyrics else { return match.lyrics ?? "" }
@@ -76,8 +79,7 @@ private actor SuspendedService: LyricSearching {
         let model = ReaderModel(service: ImmediateService(matches: matches))
         let oldFocus = model.readerFocusID
         model.request.query = "Test"
-        model.search(settings: settings)
-        await model.waitForCurrentOperation()
+        await model.search(settings: settings)?.value
         #expect(model.selected?.title == "Vocal")
         #expect(model.document.lines == ["First line", "", "Last line"])
         #expect(model.readerFocusID != oldFocus)
@@ -97,8 +99,7 @@ private actor SuspendedService: LyricSearching {
                 .init(provider: .lrclib, providerID: "1", title: "Example", artist: "Test", lyrics: "Wonderful day")
             ]))
         model.request.query = "Example"
-        model.search(settings: settings)
-        await model.waitForCurrentOperation()
+        await model.search(settings: settings)?.value
         #expect(model.formattingError != nil)
         #expect(!model.hasLyrics)
         model.reformat(.init(lineLimit: nil))
@@ -114,15 +115,13 @@ private actor SuspendedService: LyricSearching {
         ]
         let model = ReaderModel(service: ImmediateService(matches: matches))
         model.request.query = "Test"
-        model.search(settings: settings)
-        await model.waitForCurrentOperation()
+        await model.search(settings: settings)?.value
         let searchFocus = try #require(model.pendingReaderFocusID)
         #expect(model.consumeReaderFocus(searchFocus))
         // A remounted reader must not be able to repeat the old accessibility focus notification.
         #expect(!model.consumeReaderFocus(searchFocus))
 
-        model.select(matches[1], settings: settings, focusOnLoad: false)
-        await model.waitForCurrentOperation()
+        await model.select(matches[1], settings: settings, focusOnLoad: false)?.value
         #expect(model.document.text == "Second line")
         #expect(model.readerFocusID == searchFocus)
         #expect(model.pendingReaderFocusID == nil)
@@ -135,9 +134,9 @@ private actor SuspendedService: LyricSearching {
         model.focusReader()
         let explicitFocus = try #require(model.pendingReaderFocusID)
         #expect(explicitFocus != searchFocus)
-        model.select(matches[0], settings: settings, focusOnLoad: false)
+        let selection = model.select(matches[0], settings: settings, focusOnLoad: false)
         #expect(!model.consumeReaderFocus(explicitFocus))
-        await model.waitForCurrentOperation()
+        await selection?.value
         #expect(model.pendingReaderFocusID == nil)
         model.focusMatches()
         #expect(!model.showMatches)
@@ -149,25 +148,27 @@ private actor SuspendedService: LyricSearching {
         model.toggleMatches()
         #expect(!model.showMatches)
     }
-    @Test func lateSearchCannotOverwriteNewerSearch() async {
+    @Test(arguments: [false, true])
+    func lateSearchCannotOverwriteNewerSearch(oldRequestFails: Bool) async {
         let (settings, defaults, name) = preferences()
         defer { defaults.removePersistentDomain(forName: name) }
         let service = SuspendedService()
         let model = ReaderModel(service: service)
         model.request.query = "Old"
-        model.search(settings: settings)
+        let oldSearch = model.search(settings: settings)
         await service.waitForRequest("Old")
         model.request.query = "New"
-        model.search(settings: settings)
+        let newSearch = model.search(settings: settings)
         await service.waitForRequest("New")
         await service.complete("New")
-        await model.waitForCurrentOperation()
+        await newSearch?.value
         #expect(model.selected?.title == "New")
-        await service.complete("Old")
-        // Actor queue hop allows the stale response to return before the assertion.
-        await Task.yield()
+        if oldRequestFails { await service.fail("Old") } else { await service.complete("Old") }
+        // Await the replaced operation itself, including its stale-response guard.
+        await oldSearch?.value
         #expect(model.selected?.title == "New")
         #expect(!model.isSearching)
+        #expect(model.status == "Loaded New by Test.")
     }
     @Test(arguments: [true, false]) func enteringMatchesDuringLoadingPreservesFocus(usingShortcut: Bool) async throws {
         let (settings, defaults, name) = preferences()
@@ -176,7 +177,7 @@ private actor SuspendedService: LyricSearching {
         let model = ReaderModel(service: service)
         let oldFocus = model.readerFocusID
         model.request.query = "Example"
-        model.search(settings: settings)
+        let search = model.search(settings: settings)
         await service.waitForRequest("Example")
         await service.complete("Example")
         await service.waitForLyrics()
@@ -188,7 +189,7 @@ private actor SuspendedService: LyricSearching {
             model.beginBrowsingMatches()
         }
         await service.completeLyrics()
-        await model.waitForCurrentOperation()
+        await search?.value
         #expect(model.hasLyrics)
         #expect(model.readerFocusID == oldFocus)
         #expect(model.pendingReaderFocusID == nil)
@@ -199,13 +200,31 @@ private actor SuspendedService: LyricSearching {
         let service = SuspendedService()
         let model = ReaderModel(service: service)
         model.request.query = "Old"
-        model.search(settings: settings)
+        let oldSearch = model.search(settings: settings)
         await service.waitForRequest("Old")
         model.providersChanged([.lyricsOVH])
         await service.complete("Old")
-        await Task.yield()
+        await oldSearch?.value
         #expect(model.selected == nil)
         #expect(model.matches.isEmpty)
         #expect(!model.isSearching)
     }
+    @Test func closingReaderDuringAutomaticLoadingReleasesItsState() async {
+        let (settings, defaults, name) = preferences()
+        defer { defaults.removePersistentDomain(forName: name) }
+        let service = SuspendedService(delaysLyrics: true)
+        var model: ReaderModel? = ReaderModel(service: service)
+        weak var released = model
+        model?.request.query = "Closing"
+        let operation = model?.search(settings: settings)
+        await service.waitForRequest("Closing")
+        await service.complete("Closing")
+        await service.waitForLyrics()
+        model = nil
+        #expect(released == nil)
+        #expect(operation?.isCancelled == true)
+        await service.completeLyrics()
+        await operation?.value
+    }
+
 }

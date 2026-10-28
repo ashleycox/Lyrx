@@ -20,6 +20,7 @@ struct ContentView: View {
     }
 
     var body: some View {
+        @Bindable var info = model.info
         NavigationStack {
             adaptiveContent
                 .navigationTitle("Lyrx")
@@ -52,7 +53,7 @@ struct ContentView: View {
                     }
                 }
                 .sheet(isPresented: $model.showHelp) { ReadingHelpView() }
-                .sheet(isPresented: $model.showAdditionalInfo, onDismiss: model.cancelInfo) {
+                .sheet(isPresented: $info.isPresented, onDismiss: info.cancel) {
                     AdditionalInfoView(model: model, settings: settings)
                 }
         }
@@ -70,7 +71,7 @@ struct ContentView: View {
         .onChange(of: settings.providerAccess) { model.providersChanged(settings.providerAccess.searchable) }
         .onDisappear {
             model.cancel()
-            model.cancelInfo()
+            model.info.cancel()
         }
     }
 
@@ -175,7 +176,7 @@ struct ContentView: View {
                     Link("Lyrics from \(match.provider.name)", destination: match.sourceURL)
                         .font(.caption).keyboardShortcut("s", modifiers: [.command, .option])
                     Button("Additional Info", systemImage: "info.circle") {
-                        model.openInfo(for: match, settings: settings)
+                        model.info.open(match, access: settings.providerAccess)
                     }
                     .disabled(model.isSearching).accessibilityIdentifier("additionalInfoButton")
                     .help("Additional Info (Command–I)")
