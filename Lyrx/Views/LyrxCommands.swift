@@ -60,6 +60,23 @@ struct LyrxCommands: Commands {
             }
         }
         CommandMenu("Search Results") {
+            #if os(macOS)
+                // Menu actions read current preferences even when Settings rebuilds its contact row.
+                Menu("Lyric Services") {
+                    ForEach(LyricProviderID.allCases) { provider in
+                        Button(
+                            "\(settings.enabledProviders.contains(provider) ? "Disable" : "Enable") \(provider.name)"
+                        ) {
+                            settings.setEnabled(!settings.enabledProviders.contains(provider), provider: provider)
+                        }
+                        .keyboardShortcut(
+                            provider == .lrcRed ? "r" : KeyEquivalent(provider.shortcut), modifiers: [.command, .shift]
+                        )
+                        .disabled(settings.enabledProviders.contains(provider) && !settings.canDisable(provider))
+                    }
+                }
+                Divider()
+            #endif
             Button("All Enabled Services") {
                 reader?.searchScope = nil
                 reader?.search(settings: settings)

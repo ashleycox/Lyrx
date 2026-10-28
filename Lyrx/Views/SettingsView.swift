@@ -22,9 +22,11 @@ struct SettingsView: View {
                     }
                     .disabled(settings.enabledProviders.contains(provider) && !settings.canDisable(provider))
                     .accessibilityLabel(provider.name)
-                    .keyboardShortcut(
-                        provider == .lrcRed ? "r" : KeyEquivalent(provider.shortcut), modifiers: [.command, .shift]
-                    )
+                    #if os(iOS)
+                        .keyboardShortcut(
+                            provider == .lrcRed ? "r" : KeyEquivalent(provider.shortcut), modifiers: [.command, .shift]
+                        )
+                    #endif
                     .accessibilityHint(
                         provider.summary
                             + (settings.enabledProviders.contains(provider) && !settings.canDisable(provider)

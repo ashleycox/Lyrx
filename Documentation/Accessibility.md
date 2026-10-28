@@ -18,6 +18,13 @@ Both native readers and the Mac results table keep a focus request pending until
 
 ## Runtime checks performed
 
+On 28 October 2026, on macOS 27.0.1:
+
+- All 61 core tests passed, including deferred focus, metadata-cache lifetime, late successes and failures, and reader teardown during automatic lyric loading.
+- macOS and iOS Simulator builds passed. The focused Mac table-navigation, reader-focus, and details checks passed in 12.9, 8.0, and 12.0 seconds of test execution respectively, excluding compilation and automation authorization.
+- The details check exercised metadata display, provider-scoped album navigation, and repeated lrc.red toggling through the Mac service shortcut. Provider shortcuts are exposed under Search Results → Lyric Services and retain the last-usable-provider protection.
+- These runs used fixture text and isolated preferences. They did not exercise VoiceOver, physical braille hardware, or iOS runtime focus.
+
 During development on 27 October 2026:
 
 - macOS and iOS Simulator builds passed in Swift 6 mode with complete concurrency checking.
